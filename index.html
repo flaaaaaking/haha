@@ -4,6 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>MBTI 决策工具 v1.1</title>
+<meta property="og:title" content="MBTI 决策工具 v1.1">
+<meta name="twitter:title" content="MBTI 决策工具 v1.1">
+<meta name="application-name" content="MBTI 决策工具 v1.1">
+<meta name="apple-mobile-web-app-title" content="MBTI 决策工具 v1.1">
 <style>
   /* ===== 基础与主题（暗/明 + 自动/手动 双通道） ===== */
   :root{
@@ -64,8 +68,8 @@
   <div class="wrap">
     <div class="header">
       <div>
-        <h1>MBTI 决策工具 v1.1）</h1>
-        <p class="muted">数据仅存于浏览器 <code>localStorage</code>。</p>
+        <h1>MBTI 决策工具 v1.1</h1>
+        <p class="muted">纯本地运行，免 API、免网络。数据仅存于浏览器 <code>localStorage</code>。</p>
       </div>
       <div class="btns">
         <button class="btn" id="themeToggle">切换主题：夜晚</button>
@@ -96,7 +100,12 @@
         <div id="goals" class="chips"></div>
 
         <label style="margin-top:8px;display:block">任务/问题（自然语言）</label>
-        <textarea id="task" rows="5" placeholder="例：\n给父母体检预约（本周六）\n厨房水槽渗水（影响做饭）\n下周一周会汇报（要做PPT）\n恢复每周两次力量训练\n跟伴侣沟通上周争吵"></textarea>
+        <textarea id="task" rows="5" placeholder="例：
+给父母体检预约（本周六）
+厨房水槽渗水（影响做饭）
+下周一周会汇报（要做PPT）
+恢复每周两次力量训练
+跟伴侣沟通上周争吵"></textarea>
 
         <div style="margin-top:10px"></div>
         <h2>手动微调（功能加成）</h2>
@@ -132,6 +141,10 @@
           <p class="muted" id="oneLine"></p>
           <h2>下一步动作（最多 3 条）</h2>
           <div id="nextActions" class="list"></div>
+        </div>
+        <div class="card" style="margin:12px 0">
+          <h2>任务优先队列（根据内容自动排序）</h2>
+          <div id="taskList" class="list"></div>
         </div>
         <div id="cats" class="list"></div>
         <div class="card" style="margin-top:12px">
@@ -249,11 +262,41 @@ function scoreCategories(funcW){
   }).sort((a,b)=>b.score-a.score);
 }
 
-function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain}){
-  const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join("\n");
-  const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(" · ")).join("\n\n");
+function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,tasksSorted}){
+  const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join("
+");
+  const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}
+> ${c.brief}
+来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(" · ")).join("
+
+");
   const expNote = showExplain?"（含解释）":"（简洁版）";
-  return `# 决策报告 ${expNote}\n\n**类型**：${type}    **阶段**：${phase.replace("0_1","0→1")}    **目标**：${goals.join(" / ")||"未选"}\n\n**任务**：\n${(task||'').trim()||"（未填写）"}\n\n---\n\n## 功能权重\n${fw}\n\n---\n\n## 建议优先级（Top 6）\n${cats}\n`;
+  const tasksMd = (tasksSorted||[]).map((t,i)=>`${i+1}. ${t.text}  \
+   · 紧急度:${(t.u*100).toFixed(0)}%｜影响力:${(t.i*100).toFixed(0)}%｜努力:${t.e.toFixed(1)}  \
+   · 匹配:${t.matchLabel}｜总分:${t.score.toFixed(2)}`).join("
+");
+  return `# 决策报告 ${expNote}
+
+**类型**：${type}    **阶段**：${phase.replace("0_1","0→1")}    **目标**：${goals.join(" / ")||"未选"}
+
+**任务**：
+${(task||'').trim()||"（未填写）"}
+
+---
+
+## 任务优先队列（高→低）
+${tasksMd||"（未检测到可排序的任务，每行一条）"}
+
+---
+
+## 功能权重
+${fw}
+
+---
+
+## 建议优先级（Top 6）
+${cats}
+`;
 }
 
 const $ = s => document.querySelector(s);
@@ -263,7 +306,8 @@ const els = {
   cats: $('#cats'), md: $('#md'), copyMd: $('#copyMd'),
   resetManual: $('#resetManual'), saveProfile: $('#saveProfile'), loadProfile: $('#loadProfile'), exportJSON: $('#exportJSON'),
   demoBtn: $('#demoBtn'), explainToggle: $('#explainToggle'),
-  oneLine: $('#oneLine'), nextActions: $('#nextActions'), themeToggle: $('#themeToggle')
+  oneLine: $('#oneLine'), nextActions: $('#nextActions'), themeToggle: $('#themeToggle'),
+  taskList: $('#taskList')
 };
 
 const state = { type: 'INTJ', phase: '0_1', goals: ['效率','可扩展'], task: '', manual: {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}, showExplain: false };
@@ -285,15 +329,21 @@ function applyGroupThemeByType(type){ const g = GROUP_BY_TYPE[type] || 'analysts
 function computeAndRender(){
   applyGroupThemeByType(state.type);
   const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual);
-  els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{ const d = FUNC_DESC[f]; const detail = state.showExplain ? `<div class="sub">输入：${d.in}</div><div class="sub">评估：${d.eval}</div><div class="sub">输出：${d.out}</div>` : ''; return `<div class="item"><div class="kv"><div><b>${f}</b></div><div class="sub">${(v*100).toFixed(1)}%</div></div>${detail}</div>` }).join('');
+  els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{ const d = FUNC_DESC[f]; const detail = state.showExplain ? `<div class=\"sub\">输入：${d.in}</div><div class=\"sub\">评估：${d.eval}</div><div class=\"sub\">输出：${d.out}</div>` : ''; return `<div class=\"item\"><div class=\"kv\"><div><b>${f}</b></div><div class=\"sub\">${(v*100).toFixed(1)}%</div></div>${detail}</div>` }).join('');
   els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
   const cats = scoreCategories(funcW);
-  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class="item"><div class="kv"><div><b>${c.title}</b></div><div class="sub">${c.score}</div></div><div class="sub">${c.brief}</div><div class="sub">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div></div>`).join('');
+  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class=\"item\"><div class=\"kv\"><div><b>${c.title}</b></div><div class=\"sub\">${c.score}</div></div><div class=\"sub\">${c.brief}</div><div class=\"sub\">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div></div>`).join('');
   const summaryMap = { '快速 MVP/可用版本': '先做能跑起来的版本，灰度上线并预留回退。', '内核重构/技术债偿还': '优先修内核与债务，保证稳定与可维护性。', '增长实验/新路径': '先开实验槽位，跑两条主假设，择优放大。', '合规与风控': '把合规与审计补齐，再考虑扩张与推广。', '体验与感知提升': '把可感知收益前置到 3 步内，反馈要即刻可见。', '指标化与可观测性': '先把关键指标与埋点打通，决策要可量化。', '文档/流程与协作': '把决策留痕与流程标准化，确保可复盘。' };
   const top = cats[0]; els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief) : '';
   const actionsMap = { '快速 MVP/可用版本': ['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'], '内核重构/技术债偿还': ['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'], '增长实验/新路径': ['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'], '合规与风控': ['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'], '体验与感知提升': ['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'], '指标化与可观测性': ['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'], '文档/流程与协作': ['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏'] };
-  els.nextActions.innerHTML = (top ? actionsMap[top.title]||[] : []).slice(0,3).map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('');
-  els.md.textContent = toMarkdown({ type:state.type, phase:state.phase, goals:state.goals, funcWeights:funcW, categories:cats, task:state.task, showExplain: state.showExplain });
+  els.nextActions.innerHTML = (top ? actionsMap[top.title]||[] : []).slice(0,3).map(a=>`<div class=\"item\"><div class=\"sub\">${a}</div></div>`).join('');
+  // === 任务解析与排序 ===
+  const tasks = parseTasks(state.task);
+  const matchMap = buildCategoryMatchMap(cats);
+  const tasksSorted = scoreAndSortTasks(tasks, funcW, matchMap);
+  renderTaskList(tasksSorted);
+  // Markdown 导出
+  els.md.textContent = toMarkdown({ type:state.type, phase:state.phase, goals:state.goals, funcWeights:funcW, categories:cats, task:state.task, showExplain: state.showExplain, tasksSorted });
 }
 
 function bindEvents(){
@@ -311,9 +361,70 @@ function bindEvents(){
   els.themeToggle.onclick = ()=>{ const isLight = document.body.classList.contains('theme-light'); setTheme(isLight ? 'dark' : 'light'); };
 }
 
-function applyDemo(){ state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展']; state.task=`给父母体检预约（本周六）\n厨房水槽渗水（影响做饭）\n下周一周会汇报（要做PPT）\n恢复每周两次力量训练\n跟伴侣沟通上周争吵`; state.manual={Ni:0.05, Ne:0.00, Si:0.05, Se:0.00, Fi:0.00, Fe:0.00, Ti:0.10, Te:0.20}; els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task; renderGoals(); renderManual(); computeAndRender(); }
+function applyDemo(){ state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展']; state.task=`给父母体检预约（本周六）
+厨房水槽渗水（影响做饭）
+下周一周会汇报（要做PPT）
+恢复每周两次力量训练
+跟伴侣沟通上周争吵`; state.manual={Ni:0.05, Ne:0.00, Si:0.05, Se:0.00, Fi:0.00, Fe:0.00, Ti:0.10, Te:0.20}; els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task; renderGoals(); renderManual(); computeAndRender(); }
 
 (function(){ try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(raw){ Object.assign(state, JSON.parse(raw)); } }catch{} initSelectors(); els.task.value = state.task || ''; bindEvents(); const isLight = document.body.classList.contains('theme-light'); els.themeToggle.textContent = '切换主题：' + (isLight?'白天':'夜晚'); applyGroupThemeByType(state.type); computeAndRender(); })();
+
+// ======= 任务解析/评分/渲染 =======
+function parseTasks(raw){
+  return (raw||'').split(/
++/).map(s=>s.trim()).filter(Boolean).map(t=>({text:t}));
+}
+function pickEffort(text){
+  const small=/^([一-龥]{0,6})?(预约|电话|发(送)?邮件|改文案|整理|回复|下单|取件|缴费|买菜|取药)/;
+  const big=/(重构|重写|系统|方案|汇报PPT|论文|复盘|装修|迁移|体检陪同|出差|合同|对接|集成|培训)/;
+  if(big.test(text)) return 1.5; if(small.test(text)) return 0.6; return 1.0;
+}
+function pickUrgency(text){
+  if(/今天|今晚|立刻|马上|尽快|DDL|截止|明天|本周[一二三四五六日天]?|周[一二三四五六日天]/i.test(text)) return 1.0;
+  if(/下周|这月|本月|近期|尽早/.test(text)) return 0.7; if(/长期|了解|学习|研究|以后/.test(text)) return 0.4; return 0.5;
+}
+function pickImpact(text){
+  if(/体检|健康|漏水|维修|安全|客户|合同|面试|考试|交付|合规|隐私|账号|支付/.test(text)) return 1.0;
+  if(/汇报|PPT|优化|整理资料|备份|备考|训练|运动|学习计划/.test(text)) return 0.7; return 0.5;
+}
+function buildCategoryMatchMap(cats){
+  const norm = (x)=> x/Math.max(1, (cats[0]?.score||100)); // 最高归一化
+  return {
+    mvp: norm(cats.find(c=>c.key==='mvp')?.score||0),
+    refactor: norm(cats.find(c=>c.key==='refactor')?.score||0),
+    growth: norm(cats.find(c=>c.key==='growth')?.score||0),
+    compliance: norm(cats.find(c=>c.key==='compliance')?.score||0),
+    experience: norm(cats.find(c=>c.key==='experience')?.score||0),
+    analytics: norm(cats.find(c=>c.key==='analytics')?.score||0),
+    docs: norm(cats.find(c=>c.key==='docs')?.score||0)
+  };
+}
+function mapTextToCategory(text){
+  if(/重构|债|重写|架构|内核|技术/.test(text)) return 'refactor';
+  if(/合规|隐私|风控|权限|实名|审计/.test(text)) return 'compliance';
+  if(/上线|MVP|灰度|回退|发布|修复|Bug|报修|预约|缴费/.test(text)) return 'mvp';
+  if(/增长|拉新|转化|广告|投放|活动|渠道/.test(text)) return 'growth';
+  if(/体验|UI|动效|无障碍|可用性|首屏|卡顿|沟通|关系|约会|家人|伴侣/.test(text)) return 'experience';
+  if(/埋点|指标|监控|日志|看板|报表|A\/B|复盘/.test(text)) return 'analytics';
+  if(/文档|流程|规范|ADR|会议纪要|笔记|作业|论文|备考/.test(text)) return 'docs';
+  return 'mvp';
+}
+function scoreAndSortTasks(tasks, funcW, matchMap){
+  const scored = tasks.map(t=>{
+    const u = pickUrgency(t.text); // 0~1
+    const i = pickImpact(t.text);  // 0~1
+    const e = pickEffort(t.text);  // 0.6/1.0/1.5
+    const cat = mapTextToCategory(t.text);
+    const f = clamp01(matchMap[cat]||0.5); // 与当前“类别优先级”匹配度
+    const score = ((i*0.5 + u*0.4 + f*0.1) / e) * 100; // 0~100+
+    return {...t, u,i,e, f, score, matchLabel:cat.toUpperCase()};
+  }).sort((a,b)=> b.score - a.score);
+  return scored;
+}
+function renderTaskList(list){
+  if(!els.taskList) return; if(!list.length){ els.taskList.innerHTML = '<div class="item sub">（请输入任务：一行一条）</div>'; return; }
+  els.taskList.innerHTML = list.map(t=>`<div class="item"><div class="kv"><div>${t.text}</div><div class="sub">${t.score.toFixed(1)}</div></div><div class="sub">紧急:${(t.u*100).toFixed(0)}% · 影响:${(t.i*100).toFixed(0)}% · 努力:${t.e.toFixed(1)} · 匹配:${t.matchLabel}</div></div>`).join('');
+}
 </script>
 </body>
 </html>
