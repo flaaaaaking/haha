@@ -1,209 +1,217 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MBTI 决策工具 v1.1</title>
-<meta property="og:title" content="MBTI 决策工具 v1.1">
-<meta name="twitter:title" content="MBTI 决策工具 v1.1">
-<meta name="application-name" content="MBTI 决策工具 v1.1">
-<meta name="apple-mobile-web-app-title" content="MBTI 决策工具 v1.1">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MBTI 决策工具 v1.1.2</title>
+<meta name="apple-mobile-web-app-title" content="MBTI 决策工具 v1.1.2">
 <style>
-  /* ===== 基础与主题（暗/明 + 自动/手动 双通道） ===== */
-  :root{
-    /* 暗色主题默认值（作为兜底） */
-    --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34;
-    --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16;
-    /* 品牌色（由 16 型 → 四色组 自动覆盖）*/
-    --brand:#7E57C2; --brand-acc:#9575CD; --brand-hi:#B39DDB; --btn-bg:var(--brand);
-  }
-  /* 跟随系统：明亮 */
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db; --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa; }
-  }
-  /* 跟随系统：暗色 */
-  @media (prefers-color-scheme: dark){
-    :root{ --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34; --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16; }
-  }
-  /* 手动覆盖：Notion 友好（优先级更高） */
-  body.theme-light{ --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db; --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa; }
-  body.theme-dark { --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34; --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16; }
-
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-       font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,
-             "PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
-  .wrap{max-width:1200px;margin:0 auto;padding:20px}
-  .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  h1{font-size:22px;margin:0 0 6px}
-  p.muted{color:var(--muted);margin:4px 0 16px}
-  .grid{display:grid;grid-template-columns:1fr;gap:16px}
-  @media(min-width:1024px){.grid.grid-3{grid-template-columns:1fr 1.4fr 1fr}}
-  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0));
-        border:1px solid var(--line);border-radius:16px;padding:14px}
-  select,textarea,input[type="text"]{width:100%;background:var(--input);color:var(--text);
-    border:1px solid var(--inputbd);border-radius:10px;padding:8px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--chip);border:1px solid var(--chipbd);border-radius:999px;padding:6px 10px;color:inherit;cursor:pointer}
-  .chip.on{background:var(--brand-hi);color:#0f172a;border-color:var(--brand-hi)}
-  .row{display:flex;align-items:center;gap:10px;margin:6px 0}
-  .row .lab{width:32px;color:var(--muted)}
-  input[type="range"]{width:100%}
-  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .btn{background:transparent;border:1px solid var(--line);color:var(--text);
-       border-radius:10px;padding:6px 10px;cursor:pointer;transition:all .2s ease}
-  .btn.primary{background:var(--btn-bg);color:#fff;border-color:var(--btn-bg);box-shadow:0 0 0 0 rgba(0,0,0,0.2)}
-  .btn.primary:hover{filter:brightness(.95);box-shadow:0 6px 20px -8px var(--brand-hi)}
-  .kv{display:flex;justify-content:space-between;align-items:center}
-  .sub{color:var(--muted);font-size:12px}
-  .list{display:grid;gap:10px}
-  .item{border:1px solid var(--line);border-radius:12px;padding:10px}
-/* 进度条：用于功能权重 & 类别得分 */
-.bar{position:relative;height:8px;background:var(--chip);border:1px solid var(--chipbd);border-radius:999px;overflow:hidden;margin-top:6px}
-.bar i{display:block;height:100%;background:var(--brand-acc)}
-  pre{white-space:pre-wrap;background:var(--code);border:1px solid var(--line);
-      border-radius:12px;padding:10px;max-height:320px;overflow:auto}
-  footer{color:var(--muted);text-align:center;font-size:12px;padding:24px 0}
-  code{background:var(--code);border:1px solid var(--line);padding:2px 6px;border-radius:6px}
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="header">
-      <div>
-        <h1>MBTI 决策工具 v1.1</h1>
-        <p class="muted">纯本地运行，免 API、免网络。数据仅存于浏览器 <code>localStorage</code>。</p>
-      </div>
-      <div class="btns">
-        <button class="btn" id="themeToggle">切换主题：夜晚</button>
-      </div>
-    </div>
-
-    <div class="grid grid-3">
-      <!-- 左：输入区 -->
-      <section class="card">
-        <h2>参数</h2>
-        <div class="card" style="margin:10px 0">
-          <h2>快速开始</h2>
-          <div class="btns">
-            <button class="btn primary" id="demoBtn">示例填充</button>
-            <button class="btn" id="saveProfile">保存配置</button>
-            <button class="btn" id="loadProfile">读取</button>
-            <button class="btn" id="exportJSON">导出 JSON</button>
-          </div>
-        </div>
-
-        <label>类型（16 型）</label>
-        <select id="type"></select>
-
-        <label style="margin-top:8px;display:block">项目阶段</label>
-        <select id="phase"></select>
-
-        <label style="margin-top:8px;display:block">目标（多选）</label>
-        <div id="goals" class="chips"></div>
-
-        <label style="margin-top:8px;display:block">任务/问题（自然语言）</label>
-        <textarea id="task" rows="5" placeholder="例：
-给父母体检预约（本周六）
-厨房水槽渗水（影响做饭）
-下周一周会汇报（要做PPT）
-恢复每周两次力量训练
-跟伴侣沟通上周争吵"></textarea>
-
-        <div style="margin-top:10px"></div>
-        <h2>手动微调（功能加成）</h2>
-        <div id="manual"></div>
-        <div class="btns">
-          <button class="btn" id="resetManual">重置</button>
-        </div>
-      </section>
-
-      <!-- 中：解释与权重 -->
-      <section class="card">
-        <div class="card" style="margin-bottom:12px">
-          <h2>术语小抄</h2>
-          <p class="sub">Ni 远期图景｜Ne 可能路径｜Si 经验基线｜Se 现实输入｜Fi 个人价值｜Fe 群体关系｜Ti 逻辑正确｜Te 执行效率</p>
-        </div>
-        <div class="kv">
-          <h2>功能权重</h2>
-          <button class="btn" id="explainToggle">解释：关闭</button>
-        </div>
-        <div id="weights" class="list"></div>
-        <div class="card" style="margin-top:12px">
-          <h2>阶段/目标影响</h2>
-          <p class="muted" id="phaseGoalDesc"></p>
-          <p class="sub">说明：系统融合“类型堆栈、项目阶段、目标偏好、手动微调”，并做归一化。</p>
-        </div>
-      </section>
-
-      <!-- 右：结果与导出 -->
-      <section class="card">
-        <h2>建议优先级（Top 6）</h2>
-        <div class="card" style="margin:12px 0">
-          <h2>一行话结论</h2>
-          <p class="muted" id="oneLine"></p>
-          <h2>下一步动作（最多 3 条）</h2>
-          <div id="nextActions" class="list"></div>
-        </div>
-        <div class="card" style="margin:12px 0">
-          <h2>任务优先队列（根据内容自动排序）</h2>
-          <div id="taskList" class="list"></div>
-        </div>
-        <div id="cats" class="list"></div>
-        <div class="card" style="margin-top:12px">
-          <h2>导出</h2>
-          <div class="btns"><button class="btn primary" id="copyMd">复制 Markdown</button></div>
-          <pre id="md"></pre>
-        </div>
-      </section>
-    </div>
-
-    <footer>离线 · 免 API · 决策仅作偏好参考，不作为唯一依据。</footer>
-  </div>
-
-<script>
-/* ================== 主题初始化与切换（Notion 友好） ================== */
-(function initTheme(){
-  const safeGet = (k)=>{try{return localStorage.getItem(k)}catch{return null}};
-  const pref = safeGet('mbti_theme'); // 'light' | 'dark' | null
-  const sysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-  const mode = pref || (sysLight ? 'light' : 'dark');
-  document.body.classList.remove('theme-light','theme-dark');
-  document.body.classList.add(mode==='light'?'theme-light':'theme-dark');
-})();
-
-function setTheme(mode){ // 'light' | 'dark' | 'auto'
-  if(mode==='auto'){
-    const sysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    mode = sysLight ? 'light' : 'dark';
-  }
-  document.body.classList.remove('theme-light','theme-dark');
-  document.body.classList.add(mode==='light'?'theme-light':'theme-dark');
-  try{ localStorage.setItem('mbti_theme', mode); }catch{}
-  const btn = document.getElementById('themeToggle');
-  if(btn){ btn.textContent = '切换主题：' + (mode==='dark'?'夜晚':'白天'); }
+:root{
+  --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34;
+  --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16;
+  --brand:#7E57C2; --brand-acc:#9575CD; --brand-hi:#B39DDB; --btn-bg:var(--brand);
+}
+/* 手动明/暗主题（Notion 友好） */
+body.theme-light{
+  --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db;
+  --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa;
+}
+body.theme-dark{
+  --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34;
+  --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16;
 }
 
-try{
-  const mq = window.matchMedia('(prefers-color-scheme: light)');
-  mq.addEventListener('change', (e)=>{
-    const pref = (()=>{try{return localStorage.getItem('mbti_theme')}catch{return null}})();
-    if(!pref || pref==='auto'){ setTheme(e.matches ? 'light' : 'dark'); }
-  });
-}catch{}
+/* 基础排版 */
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,
+       "PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+}
+.wrap{max-width:1200px;margin:0 auto;padding:20px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:22px;margin:0 0 6px}
+.muted{color:var(--muted)}
 
-/* ================== 数据定义 ================== */
-const MBTI_STACKS = {
+/* 栅格与卡片 */
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:1024px){.grid{grid-template-columns:1fr 1.4fr 1fr}}
+.card{
+  background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));
+  border:1px solid var(--line); border-radius:16px; padding:14px;
+}
+
+/* 表单与按钮 */
+select,textarea,input[type="text"]{
+  width:100%; background:var(--input); color:var(--text);
+  border:1px solid var(--inputbd); border-radius:10px; padding:8px;
+}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  background:transparent; border:1px solid var(--line); color:var(--text);
+  border-radius:10px; padding:6px 10px; cursor:pointer; transition:.15s ease;
+}
+.btn:hover{filter:brightness(.98)}
+.btn.primary{background:var(--btn-bg); border-color:var(--btn-bg); color:#fff}
+
+/* 筛选 Chip */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  background:var(--chip); border:1px solid var(--chipbd);
+  border-radius:999px; padding:6px 10px; cursor:pointer;
+}
+.chip.on{background:var(--brand-hi); color:#0f172a; border-color:var(--brand-hi)}
+
+/* 列表与条形图 */
+.list{display:grid;gap:10px}
+.item{border:1px solid var(--line); border-radius:12px; padding:10px}
+.kv{display:flex;justify-content:space-between;align-items:center}
+.sub{color:var(--muted); font-size:12px}
+
+.bar{
+  position:relative; height:8px; background:var(--chip);
+  border:1px solid var(--chipbd); border-radius:999px; overflow:hidden; margin-top:6px;
+}
+.bar i{display:block; height:100%; background:var(--brand-acc)}
+
+/* 代码块与页脚 */
+pre{
+  white-space:pre-wrap; background:var(--code); border:1px solid var(--line);
+  border-radius:12px; padding:10px; max-height:320px; overflow:auto;
+}
+footer{color:var(--muted); text-align:center; font-size:12px; padding:24px 0}
+code{background:var(--code); border:1px solid var(--line); padding:2px 6px; border-radius:6px}
+</style>
+</head>
+<body class="theme-light">
+<div class="wrap">
+  <div class="header">
+    <div>
+      <h1>MBTI 决策工具 v1.1.2</h1>
+      <p class="muted">纯本地运行，免 API。数据仅存在 <code>localStorage</code>。</p>
+    </div>
+    <div class="btns">
+      <button class="btn" id="themeToggle">切换主题：白天</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- 左：输入 -->
+    <section class="card">
+      <h2>参数</h2>
+      <div class="card" style="margin:10px 0">
+        <h3>快速开始</h3>
+        <div class="btns">
+          <button class="btn primary" id="demoBtn">示例填充</button>
+          <button class="btn" id="saveProfile">保存配置</button>
+          <button class="btn" id="loadProfile">读取</button>
+          <button class="btn" id="exportJSON">导出 JSON</button>
+        </div>
+      </div>
+
+      <label>类型（16 型）</label>
+      <select id="type"></select>
+
+      <label style="margin-top:8px;display:block">项目阶段</label>
+      <select id="phase"></select>
+
+      <label style="margin-top:8px;display:block">目标（多选）</label>
+      <div id="goals" class="chips"></div>
+
+      <label style="margin-top:8px;display:block">任务/问题（自然语言）</label>
+      <textarea id="task" rows="6" placeholder="每行一条；也支持中文标点/项目符号分隔。例：&#10;给父母体检预约（周六）&#10;厨房水槽渗水（影响做饭）&#10;下周一周会汇报（PPT）"></textarea>
+
+      <h3 style="margin-top:10px">手动微调（功能加成）</h3>
+      <div id="manual"></div>
+      <div class="btns"><button class="btn" id="resetManual">重置</button></div>
+    </section>
+
+    <!-- 中：权重与解释 -->
+    <section class="card">
+      <div class="card" style="margin-bottom:12px">
+        <h3>术语小抄</h3>
+        <p class="sub">Ni 远期图景｜Ne 可能路径｜Si 经验基线｜Se 现实输入｜Fi 个人价值｜Fe 群体关系｜Ti 逻辑正确｜Te 执行效率</p>
+      </div>
+      <div class="kv">
+        <h2>功能权重</h2>
+        <button class="btn" id="explainToggle">解释：开启</button>
+      </div>
+      <div id="weights" class="list"></div>
+      <div class="card" style="margin-top:12px">
+        <h3>阶段/目标影响</h3>
+        <p class="muted" id="phaseGoalDesc"></p>
+        <p class="sub">说明：系统融合“类型堆栈、项目阶段、目标偏好、手动微调”，并做归一化。</p>
+      </div>
+    </section>
+
+    <!-- 右：结果与导出 -->
+    <section class="card">
+      <h2>建议优先级（Top 6）</h2>
+      <div class="card" style="margin:12px 0">
+        <h3>一行话结论</h3>
+        <p class="muted" id="oneLine"></p>
+        <h3>下一步动作（最多 3 条）</h3>
+        <div id="nextActions" class="list"></div>
+      </div>
+
+      <!-- 类别列表 -->
+      <div id="cats" class="list"></div>
+
+      <!-- 任务优先队列（根据内容自动排序） -->
+      <div class="card" style="margin-top:12px">
+        <h3>任务优先队列（高→低）</h3>
+        <div id="taskQueue" class="list"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>导出</h3>
+        <div class="btns"><button class="btn primary" id="copyMd">复制 Markdown</button></div>
+        <pre id="md"></pre>
+      </div>
+    </section>
+  </div>
+
+  <footer>离线 · 免 API · 决策仅作偏好参考，不作为唯一依据。</footer>
+</div>
+
+<script>
+/* ========== 主题（手动优先） ========== */
+(function(){try{
+  const pref = localStorage.getItem('mbti_theme');
+  setTheme(pref || 'light');
+}catch{ setTheme('light'); }})();
+
+function setTheme(mode){
+  document.body.classList.remove('theme-light','theme-dark');
+  document.body.classList.add(mode==='dark'?'theme-dark':'theme-light');
+  try{ localStorage.setItem('mbti_theme', mode); }catch{}
+  const btn = document.getElementById('themeToggle');
+  if(btn) btn.textContent = '切换主题：' + (mode==='dark'?'夜晚':'白天');
+}
+document.getElementById('themeToggle').onclick = ()=> setTheme(
+  document.body.classList.contains('theme-light') ? 'dark' : 'light'
+);
+
+/* ========== 数据 ========== */
+const MBTI_STACKS={
   INTJ:["Ni","Te","Fi","Se"], INTP:["Ti","Ne","Si","Fe"], INFJ:["Ni","Fe","Ti","Se"], INFP:["Fi","Ne","Si","Te"],
   ISTJ:["Si","Te","Fi","Ne"], ISTP:["Ti","Se","Ni","Fe"], ISFJ:["Si","Fe","Ti","Ne"], ISFP:["Fi","Se","Ni","Te"],
   ENTJ:["Te","Ni","Se","Fi"], ENTP:["Ne","Ti","Fe","Si"], ENFJ:["Fe","Ni","Se","Ti"], ENFP:["Ne","Fi","Te","Si"],
-  ESTJ:["Te","Si","Ne","Fi"], ESTP:["Se","Ti","Fe","Ni"], ESFJ:["Fe","Si","Ne","Ti"], ESFP:["Se","Fi","Te","Ni"],
+  ESTJ:["Te","Si","Ne","Fi"], ESTP:["Se","Ti","Fe","Ni"], ESFJ:["Fe","Si","Ne","Ti"], ESFP:["Se","Fi","Te","Ni"]
 };
-
-const GROUP_BY_TYPE = { INTJ:'analysts', INTP:'analysts', ENTJ:'analysts', ENTP:'analysts', ISTJ:'sentinels', ISFJ:'sentinels', ESTJ:'sentinels', ESFJ:'sentinels', ISTP:'explorers', ISFP:'explorers', ESTP:'explorers', ESFP:'explorers', INFJ:'diplomats', INFP:'diplomats', ENFJ:'diplomats', ENFP:'diplomats' };
-const GROUP_PALETTE = { analysts:{ main:'#7E57C2', acc:'#9575CD', hi:'#B39DDB' }, sentinels:{ main:'#1E88E5', acc:'#42A5F5', hi:'#90CAF9' }, explorers:{ main:'#FBC02D', acc:'#FDD835', hi:'#FFE082' }, diplomats:{ main:'#43A047', acc:'#66BB6A', hi:'#A5D6A7' } };
-
-const FUNC_DESC = {
+const GROUP_BY_TYPE={
+  INTJ:'analysts', INTP:'analysts', ENTJ:'analysts', ENTP:'analysts',
+  ISTJ:'sentinels', ISFJ:'sentinels', ESTJ:'sentinels', ESFJ:'sentinels',
+  ISTP:'explorers', ISFP:'explorers', ESTP:'explorers', ESFP:'explorers',
+  INFJ:'diplomats', INFP:'diplomats', ENFJ:'diplomats', ENFP:'diplomats'
+};
+const GROUP_PALETTE={
+  analysts:{ main:'#7E57C2', acc:'#9575CD', hi:'#B39DDB' },   /* 紫人组 */
+  sentinels:{ main:'#1E88E5', acc:'#42A5F5', hi:'#90CAF9' }, /* 蓝人组 */
+  explorers:{ main:'#FBC02D', acc:'#FDD835', hi:'#FFE082' }, /* 黄人组 */
+  diplomats:{ main:'#43A047', acc:'#66BB6A', hi:'#A5D6A7' }  /* 绿人组 */
+};
+const FUNC_DESC={
   Ni:{in:"趋势、模式、远期图景", eval:"预测与必然性推断", out:"长期策略与杠杆点"},
   Ne:{in:"可能性、创意分支", eval:"可选路径评估", out:"探索实验与增长点"},
   Si:{in:"既往经验、基线数据", eval:"稳定性与一致性检验", out:"标准化、复用与风险降低"},
@@ -213,226 +221,311 @@ const FUNC_DESC = {
   Ti:{in:"概念精确、结构严谨", eval:"逻辑一致性与可证明性", out:"规则化、模型与内核正确性"},
   Te:{in:"目标指标、资源调度", eval:"效率/成本/收益比", out:"执行路线、KPI 与里程碑"},
 };
-
-const PHASE_WEIGHTS = {
-  "探索": { Ne:.35, Se:.15, Ti:.10, Fi:.10, Fe:.10, Ni:.10, Te:.05, Si:.05 },
-  "0_1": { Ni:.20, Te:.25, Se:.15, Ti:.15, Fi:.05, Fe:.05, Si:.10, Ne:.05 },
-  "增长": { Ne:.25, Te:.20, Fe:.15, Se:.15, Ni:.10, Si:.05, Ti:.05, Fi:.05 },
-  "重构": { Ti:.25, Si:.25, Te:.20, Ni:.10, Se:.10, Fi:.05, Fe:.05, Ne:0 },
-  "合规": { Si:.30, Te:.25, Fe:.15, Ti:.15, Fi:.10, Se:.05, Ni:0, Ne:0 },
+const PHASE_WEIGHTS={
+  "探索":{ Ne:.35, Se:.15, Ti:.10, Fi:.10, Fe:.10, Ni:.10, Te:.05, Si:.05 },
+  "0_1":{ Ni:.20, Te:.25, Se:.15, Ti:.15, Fi:.05, Fe:.05, Si:.10, Ne:.05 },
+  "增长":{ Ne:.25, Te:.20, Fe:.15, Se:.15, Ni:.10, Si:.05, Ti:.05, Fi:.05 },
+  "重构":{ Ti:.25, Si:.25, Te:.20, Ni:.10, Se:.10, Fi:.05, Fe:.05, Ne:0 },
+  "合规":{ Si:.30, Te:.25, Fe:.15, Ti:.15, Fi:.10, Se:.05, Ni:0, Ne:0 },
 };
-const GOAL_WEIGHTS = {
-  "体验": { Se:.35, Fe:.20, Ne:.15, Si:.05, Fi:.10, Te:.05, Ni:.05, Ti:.05 },
-  "效率": { Te:.35, Ti:.20, Si:.15, Se:.10, Ni:.10, Ne:.05, Fe:.03, Fi:.02 },
-  "可扩展": { Ni:.25, Te:.20, Ti:.20, Si:.15, Ne:.10, Se:.05, Fe:.03, Fi:.02 },
-  "稳健": { Si:.30, Ti:.20, Te:.20, Fi:.10, Fe:.10, Se:.05, Ni:.03, Ne:.02 },
-  "探索": { Ne:.40, Ni:.20, Se:.15, Te:.10, Ti:.05, Fe:.05, Fi:.03, Si:.02 },
+const GOAL_WEIGHTS={
+  "体验":{ Se:.35, Fe:.20, Ne:.15, Si:.05, Fi:.10, Te:.05, Ni:.05, Ti:.05 },
+  "效率":{ Te:.35, Ti:.20, Si:.15, Se:.10, Ni:.10, Ne:.05, Fe:.03, Fi:.02 },
+  "可扩展":{ Ni:.25, Te:.20, Ti:.20, Si:.15, Ne:.10, Se:.05, Fe:.03, Fi:.02 },
+  "稳健":{ Si:.30, Ti:.20, Te:.20, Fi:.10, Fe:.10, Se:.05, Ni:.03, Ne:.02 },
+  "探索":{ Ne:.40, Ni:.20, Se:.15, Te:.10, Ti:.05, Fe:.05, Fi:.03, Si:.02 },
 };
-
-const CATEGORY_RULES = [
-  { key:"mvp", title:"快速 MVP/可用版本", contribute:{ Se:.25, Te:.25, Ne:.10, Ti:.10 }, brief:"先落地、后打磨，保障回退。" },
-  { key:"refactor", title:"内核重构/技术债偿还", contribute:{ Ti:.35, Si:.25, Te:.20 }, brief:"防止雪崩，守住可维护性。" },
-  { key:"growth", title:"增长实验/新路径", contribute:{ Ne:.35, Se:.15, Te:.10, Fe:.10 }, brief:"跑实验—择优—规模化。" },
-  { key:"compliance", title:"合规与风控", contribute:{ Si:.30, Te:.25, Fe:.15, Fi:.10 }, brief:"先合法再扩张，留审计痕迹。" },
-  { key:"experience", title:"体验与感知提升", contribute:{ Se:.35, Fe:.20, Ne:.10 }, brief:"可感知收益 < 3 步可见。" },
-  { key:"analytics", title:"指标化与可观测性", contribute:{ Te:.30, Ti:.20, Si:.20 }, brief:"量化因果，闭环评估。" },
-  { key:"docs", title:"文档/流程与协作", contribute:{ Fe:.25, Si:.25, Te:.15, Ti:.10 }, brief:"决策可追溯，可复盘。" },
+const CATEGORY_RULES=[
+  { key:"mvp",        title:"快速 MVP/可用版本",  contribute:{ Se:.25, Te:.25, Ne:.10, Ti:.10 }, brief:"先落地、后打磨，保障回退。" },
+  { key:"refactor",   title:"内核重构/技术债偿还", contribute:{ Ti:.35, Si:.25, Te:.20 },       brief:"防止雪崩，守住可维护性。" },
+  { key:"growth",     title:"增长实验/新路径",    contribute:{ Ne:.35, Se:.15, Te:.10, Fe:.10 }, brief:"跑实验—择优—规模化。" },
+  { key:"compliance", title:"合规与风控",        contribute:{ Si:.30, Te:.25, Fe:.15, Fi:.10 }, brief:"先合法再扩张，留审计痕迹。" },
+  { key:"experience", title:"体验与感知提升",    contribute:{ Se:.35, Fe:.20, Ne:.10 },         brief:"可感知收益 < 3 步可见。" },
+  { key:"analytics",  title:"指标化与可观测性",  contribute:{ Te:.30, Ti:.20, Si:.20 },         brief:"量化因果，闭环评估。" },
+  { key:"docs",       title:"文档/流程与协作",    contribute:{ Fe:.25, Si:.25, Te:.15, Ti:.10 }, brief:"决策可追溯，可复盘。" },
 ];
-const DEFAULT_STACK_WEIGHTS = { dom:.40, aux:.30, ter:.20, inf:.10 };
+const DEFAULT_STACK_WEIGHTS={ dom:.40, aux:.30, ter:.20, inf:.10 };
 
-const clamp01 = x => Math.max(0, Math.min(1, x));
-const sum = obj => Object.values(obj).reduce((a,b)=>a+b,0);
-function normalize(w){const s=sum(w)||1;const o={};Object.keys(w).forEach(k=>o[k]=w[k]/s);return o}
+/* ========== 小工具 ========== */
+const $ = s => document.querySelector(s);
+const els = {
+  type:$('#type'), phase:$('#phase'), goals:$('#goals'), task:$('#task'),
+  manual:$('#manual'), weights:$('#weights'), phaseGoalDesc:$('#phaseGoalDesc'),
+  cats:$('#cats'), md:$('#md'), copyMd:$('#copyMd'), resetManual:$('#resetManual'),
+  saveProfile:$('#saveProfile'), loadProfile:$('#loadProfile'), exportJSON:$('#exportJSON'),
+  demoBtn:$('#demoBtn'), explainToggle:$('#explainToggle'),
+  oneLine:$('#oneLine'), nextActions:$('#nextActions'), taskQueue:$('#taskQueue')
+};
+const state = {
+  type:'INTJ', phase:'0_1', goals:['效率','可扩展'], task:'',
+  manual:{Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0},
+  showExplain:true
+};
 
+const clamp01=x=>Math.max(0,Math.min(1,x));
+const sum=o=>Object.values(o).reduce((a,b)=>a+b,0);
+const normalize=w=>{const s=sum(w)||1; const o={}; for(const k in w) o[k]=(w[k]||0)/s; return o;};
+
+function applyGroupThemeByType(type){
+  const pal = GROUP_PALETTE[GROUP_BY_TYPE[type]||'analysts'];
+  document.documentElement.style.setProperty('--brand', pal.main);
+  document.documentElement.style.setProperty('--brand-acc', pal.acc);
+  document.documentElement.style.setProperty('--brand-hi', pal.hi);
+  document.documentElement.style.setProperty('--btn-bg', pal.main);
+}
+
+/* ========== 计算 ========== */
 function fuseWeights(type, phase, goals, manual){
-  const stack = MBTI_STACKS[type] || MBTI_STACKS["INTJ"];
+  const stack = MBTI_STACKS[type] || MBTI_STACKS.INTJ;
   const [dom,aux,ter,inf] = stack;
   const wStack = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
   wStack[dom]+=DEFAULT_STACK_WEIGHTS.dom; wStack[aux]+=DEFAULT_STACK_WEIGHTS.aux;
   wStack[ter]+=DEFAULT_STACK_WEIGHTS.ter; wStack[inf]+=DEFAULT_STACK_WEIGHTS.inf;
-  const wPhase = PHASE_WEIGHTS[phase] || {};
+  const wPhase = PHASE_WEIGHTS[phase]||{};
   const wGoal = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  goals.forEach(g=>{const gw=GOAL_WEIGHTS[g]||{};Object.entries(gw).forEach(([k,v])=>wGoal[k]+=v||0)});
-  const combined = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  Object.keys(combined).forEach(k=>{ const base=(wStack[k]||0)+(wPhase[k]||0)+(wGoal[k]||0); const boost=(manual[k]||0); combined[k]=clamp01(base+boost); });
+  goals.forEach(g=>{const gw=GOAL_WEIGHTS[g]||{}; for(const [k,v] of Object.entries(gw)) wGoal[k]+=v||0;});
+  const combined={Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
+  for(const k in combined) combined[k]=clamp01((wStack[k]||0)+(wPhase[k]||0)+(wGoal[k]||0)+(manual[k]||0));
   return normalize(combined);
 }
 
 function scoreCategories(funcW){
   return CATEGORY_RULES.map(cat=>{
-    let score=0; const contrib=[]; Object.entries(cat.contribute).forEach(([f,w])=>{const s=(funcW[f]||0)*(w||0); if(s>0) contrib.push([f,s]); score+=s;});
-    return {...cat, score:+(score*100).toFixed(1), contrib:contrib.sort((a,b)=>b[1]-a[1])}
+    let score=0; const contrib=[];
+    for(const [f,w] of Object.entries(cat.contribute)){const s=(funcW[f]||0)*(w||0); if(s>0) contrib.push([f,s]); score+=s;}
+    return {...cat, score:+(score*100).toFixed(1), contrib:contrib.sort((a,b)=>b[1]-a[1])};
   }).sort((a,b)=>b.score-a.score);
 }
 
-function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,tasksSorted}){
-  const fw = Object.entries(funcWeights)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`)
-    .join('\n');
-  const cats = categories.slice(0,6)
-    .map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · '))
-    .join('\n\n');
-  const expNote = showExplain? '（含解释）' : '（简洁版）';
-  const tasksMd = (tasksSorted||[])
-    .map((t,i)=>`${i+1}. ${t.text}  ` +
-                 `· 紧急度:${(t.u*100).toFixed(0)}%｜影响力:${(t.i*100).toFixed(0)}%｜努力:${t.e.toFixed(1)}  ` +
-                 `· 匹配:${t.matchLabel}｜总分:${t.score.toFixed(2)}`)
-    .join('\n');
-  return `# 决策报告 ${expNote}\n\n**类型**：${type}    **阶段**：${phase.replace('0_1','0→1')}    **目标**：${goals.join(' / ')||'未选'}\n\n**任务**：\n${(task||'').trim()||'（未填写）'}\n\n---\n\n## 任务优先队列（高→低）\n${tasksMd||'（未检测到可排序的任务，每行一条）'}\n\n---\n\n## 功能权重\n${fw}\n\n---\n\n## 建议优先级（Top 6）\n${cats}\n`;
+/* —— 任务解析与评分 —— */
+function parseTasks(raw){
+  if(!raw) return [];
+  let text = String(raw).replace(/\u00A0/g,' ').trim();
+  // 粗切：换行或中英文分隔符
+  let parts = text.split(/\r?\n+|[;；。\.、，,]+/);
+  // 展开同一行多个事项（和/与/及/顿号/斜杠/竖线）
+  parts = parts.flatMap(s=>s.split(/\s*(?:和|与|及|、|\s\/\s|\s\|\s)\s*/));
+  return parts.map(s=>s.trim())
+    .map(s=>s.replace(/^(\d+[\.\)）:、-]|\([0-9]+\)|[①-⑳]|[一二三四五六七八九十]+、|[-•·])\s*/, '')) // 去编号/项目符号
+    .filter(Boolean)
+    .filter((t,i,a)=>a.indexOf(t)===i)
+    .map(text=>({text}));
+}
+function pickUrgency(t){
+  if(/今天|今晚|立刻|马上|尽快|DDL|截止|现在/.test(t)) return 1.0;
+  if(/明天|后天|本周|这周|周[一二三四五六日天]/.test(t)) return 0.8;
+  if(/\b(今|本|这|下)月\b|\d{1,2}(号|日)/.test(t)) return 0.65;
+  if(/长期|以后|了解|学习|探索/.test(t)) return 0.4;
+  return 0.55;
+}
+function relationBoost(t){
+  if(/客户|甲方|老板|上级|导师|老师/.test(t)) return 0.20;
+  if(/伴侣|对象|父母|爸妈|孩子|朋友/.test(t)) return 0.15;
+  return 0;
+}
+function pickImpact(t){
+  let b = 0.5;
+  if(/汇报|复盘|面试|考试|交付|上线|合规|合同|签约|付款|收款/.test(t)) b=0.85;
+  if(/渗水|漏水|维修|健康|体检|就医|过期/.test(t)) b=Math.max(b,0.75);
+  if(/学习|阅读|整理|备份|归档/.test(t)) b=Math.max(b,0.55);
+  return Math.min(1, b + relationBoost(t));
+}
+function pickEffort(t){
+  let e=1.0;
+  if(/预约|电话|缴费|短信|邮件|确认|开票|打印/.test(t)) e=Math.min(e,0.6);
+  if(/做饭|打扫|搬运|采购|维修|医院|银行|窗口/.test(t)) e=Math.max(e,1.2);
+  if(/PPT|报告|方案|代码|排查|调研|学习|论文|整理/.test(t)) e=Math.max(e,1.1);
+  if(/长期|项目|系列/.test(t)) e=Math.max(e,1.4);
+  return e;
+}
+function matchCategoryForTask(t){
+  const dict=[
+    {key:'compliance', kw:/合规|发票|报销|合同|资质|权限|审计|隐私|备案|税/i, label:'合规/风控'},
+    {key:'mvp',        kw:/上线|交付|发布|试用|灰度|验收|演示|demo|原型/i, label:'MVP/可用版'},
+    {key:'refactor',   kw:/重构|修复|优化|技术债|性能|崩溃|错误|bug/i, label:'重构/技术债'},
+    {key:'growth',     kw:/拉新|转化|留存|活动|投放|渠道|实验|AB|增长/i, label:'增长实验'},
+    {key:'experience', kw:/体验|交互|视觉|可用性|无障碍|加载|首屏|反馈/i, label:'体验提升'},
+    {key:'analytics',  kw:/埋点|统计|报表|看板|指标|监控|日志|分析|数据/i, label:'指标化/观测'},
+    {key:'docs',       kw:/文档|流程|SOP|规范|周报|月报|ADR|记录|整理|归档/i, label:'文档/流程'},
+    {key:'health',     kw:/体检|医院|就医|药|复查|睡眠|锻炼|健身|牙科/i, label:'健康'},
+    {key:'house',      kw:/渗水|漏水|维修|家电|保洁|搬家|物业|装修|换锁|快递/i, label:'居家/后勤'},
+    {key:'relation',   kw:/伴侣|父母|爸妈|孩子|朋友|客户|老板|上级|导师|老师/i, label:'关系沟通'},
+    {key:'study',      kw:/学习|阅读|刷题|考试|复习|课程|作业|论文|备考|练习/i, label:'学习/提升'},
+  ];
+  for(const it of dict){ if(it.kw.test(t)) return it; }
+  return {key:'general', label:'一般事务'};
+}
+function scoreTaskArray(tasks, topCat){
+  const topKey = topCat?.key;
+  return tasks.map(t=>{
+    const u=pickUrgency(t.text), i=pickImpact(t.text), e=Math.max(0.6, pickEffort(t.text));
+    const match=matchCategoryForTask(t.text);
+    const m = match.key===topKey ? 1 : (/general/.test(match.key)?0:0.5);
+    const score = ((i*0.50 + u*0.35 + m*0.15) / e) * 100;
+    return {...t, u, i, e, matchKey:match.key, matchLabel:match.label, score};
+  }).sort((a,b)=> b.score - a.score);
 }
 
-const $ = s => document.querySelector(s);
-const els = {
-  type: $('#type'), phase: $('#phase'), goals: $('#goals'), task: $('#task'),
-  manual: $('#manual'), weights: $('#weights'), phaseGoalDesc: $('#phaseGoalDesc'),
-  cats: $('#cats'), md: $('#md'), copyMd: $('#copyMd'),
-  resetManual: $('#resetManual'), saveProfile: $('#saveProfile'), loadProfile: $('#loadProfile'), exportJSON: $('#exportJSON'),
-  demoBtn: $('#demoBtn'), explainToggle: $('#explainToggle'),
-  oneLine: $('#oneLine'), nextActions: $('#nextActions'), themeToggle: $('#themeToggle'),
-  taskList: $('#taskList')
-};
+/* ========== Markdown 导出 ========== */
+function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,tasksSorted}){
+  const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join('\n');
+  const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')).join('\n\n');
+  const tasksMd = (tasksSorted||[]).map((t,i)=>`${i+1}. ${t.text}  `+`· 紧急:${(t.u*100).toFixed(0)}%｜影响:${(t.i*100).toFixed(0)}%｜努力:${t.e.toFixed(1)}  `+`· 匹配:${t.matchLabel}｜总分:${t.score.toFixed(2)}`).join('\n');
+  return `# 决策报告 ${showExplain?'（含解释）':'（简洁版）'}
 
-const state = { type: 'INTJ', phase: '0_1', goals: ['效率','可扩展'], task: '', manual: {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}, showExplain: true };
+**类型**：${type}    **阶段**：${phase.replace('0_1','0→1')}    **目标**：${goals.join(' / ')||'未选'}
 
+**任务**：
+${(task||'').trim()||'（未填写）'}
+
+---
+
+## 任务优先队列（高→低）
+${tasksMd||'（未检测到可排序的任务，每行一条）'}
+
+---
+
+## 功能权重
+${fw}
+
+---
+
+## 建议优先级（Top 6）
+${cats}
+`;
+}
+
+/* ========== 初始化与渲染 ========== */
 function initSelectors(){
   els.type.innerHTML = Object.keys(MBTI_STACKS).map(t=>`<option value="${t}">${t}（${MBTI_STACKS[t].join('-')}）</option>`).join('');
   els.type.value = state.type;
   els.phase.innerHTML = Object.keys(PHASE_WEIGHTS).map(p=>`<option value="${p}">${p==='0_1'?'0→1':p}</option>`).join('');
-  els.phase.value = state.phase; renderGoals(); renderManual();
+  els.phase.value = state.phase;
+  renderGoals(); renderManual();
 }
-
-function renderGoals(){ const list = Object.keys(GOAL_WEIGHTS); els.goals.innerHTML = ''; list.forEach(g=>{ const btn = document.createElement('div'); btn.className = 'chip' + (state.goals.includes(g)?' on':''); btn.textContent = g; btn.onclick = ()=>{toggleGoal(g)}; els.goals.appendChild(btn); }); }
-function toggleGoal(g){ const i = state.goals.indexOf(g); if(i>=0) state.goals.splice(i,1); else state.goals.push(g); renderGoals(); computeAndRender(); }
-
-function renderManual(){ els.manual.innerHTML = ''; Object.keys(FUNC_DESC).forEach(f=>{ const row = document.createElement('div'); row.className='row'; const lab = document.createElement('div'); lab.className='lab'; lab.textContent=f; row.appendChild(lab); const range = document.createElement('input'); range.type='range'; range.min=0; range.max=0.5; range.step=0.01; range.value=state.manual[f]||0; const v = document.createElement('div'); v.style.width='40px'; v.className='sub'; v.style.textAlign='right'; v.textContent=range.value; range.oninput=()=>{state.manual[f]=parseFloat(range.value); v.textContent=range.value}; range.onchange=()=>computeAndRender(); row.append(range, v); els.manual.appendChild(row); }); }
-
-function applyGroupThemeByType(type){ const g = GROUP_BY_TYPE[type] || 'analysts'; const pal = GROUP_PALETTE[g]; document.documentElement.style.setProperty('--brand', pal.main); document.documentElement.style.setProperty('--brand-acc', pal.acc); document.documentElement.style.setProperty('--brand-hi', pal.hi); document.documentElement.style.setProperty('--btn-bg', pal.main); }
+function renderGoals(){
+  els.goals.innerHTML = '';
+  Object.keys(GOAL_WEIGHTS).forEach(g=>{
+    const div=document.createElement('div');
+    div.className='chip'+(state.goals.includes(g)?' on':'');
+    div.textContent=g;
+    div.onclick=()=>{const i=state.goals.indexOf(g); if(i>=0) state.goals.splice(i,1); else state.goals.push(g); renderGoals(); computeAndRender();};
+    els.goals.appendChild(div);
+  });
+}
+function renderManual(){
+  els.manual.innerHTML='';
+  Object.keys(FUNC_DESC).forEach(f=>{
+    const row=document.createElement('div'); row.className='row';
+    const lab=document.createElement('div'); lab.className='sub'; lab.style.width='32px'; lab.textContent=f; row.appendChild(lab);
+    const r=document.createElement('input'); r.type='range'; r.min=0; r.max=0.5; r.step=0.01; r.value=state.manual[f]||0;
+    const v=document.createElement('div'); v.className='sub'; v.style.width='40px'; v.style.textAlign='right'; v.textContent=r.value;
+    r.oninput=()=>{state.manual[f]=parseFloat(r.value); v.textContent=r.value};
+    r.onchange=computeAndRender;
+    row.append(r,v); els.manual.appendChild(row);
+  });
+}
 
 function computeAndRender(){
   applyGroupThemeByType(state.type);
   const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual);
-  const maxFW = Math.max(...Object.values(funcW),0.0001);
-els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
-  const d = FUNC_DESC[f];
-  const pct = (v*100).toFixed(1)+'%';
-  const bar = `<div class="bar"><i style="width:${(v/maxFW*100).toFixed(1)}%"></i></div>`;
-  const detail = state.showExplain ? `<div class=\"sub\">输入：${d.in}</div><div class=\"sub\">评估：${d.eval}</div><div class=\"sub\">输出：${d.out}</div>` : '';
-  return `<div class=\"item\">
-    <div class=\"kv\"><div><b>${f}</b></div><div class=\"sub\">${pct}</div></div>
-    ${bar}
-    ${detail}
-  </div>`
-}).join('');
-  els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
   const cats = scoreCategories(funcW);
+  const top = cats[0];
+
+  /* 功能权重（带条形图 + 解释开关） */
+  const maxFW = Math.max(...Object.values(funcW), 0.0001);
+  els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
+    const d = FUNC_DESC[f]; const pct=(v*100).toFixed(1)+'%';
+    const detail = state.showExplain ? `<div class="sub">输入：${d.in}</div><div class="sub">评估：${d.eval}</div><div class="sub">输出：${d.out}</div>` : '';
+    return `<div class="item">
+      <div class="kv"><div><b>${f}</b></div><div class="sub">${pct}</div></div>
+      <div class="bar"><i style="width:${(v/maxFW*100).toFixed(1)}%"></i></div>
+      ${detail}
+    </div>`;
+  }).join('');
+  els.explainToggle.textContent = '解释：' + (state.showExplain?'开启':'关闭');
+
+  /* 阶段/目标影响 */
+  els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
+
+  /* 建议优先级（Top 6） */
   const maxCat = Math.max(1, ...cats.map(c=>c.score));
-els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class=\"item\">
-  <div class=\"kv\"><div><b>${c.title}</b></div><div class=\"sub\">${c.score}</div></div>
-  <div class=\"sub\">${c.brief}</div>
-  <div class=\"bar\"><i style=\"width:${(c.score/maxCat*100).toFixed(1)}%\"></i></div>
-  <div class=\"sub\">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div>
-</div>`).join('');
-  const summaryMap = { '快速 MVP/可用版本': '先做能跑起来的版本，灰度上线并预留回退。', '内核重构/技术债偿还': '优先修内核与债务，保证稳定与可维护性。', '增长实验/新路径': '先开实验槽位，跑两条主假设，择优放大。', '合规与风控': '把合规与审计补齐，再考虑扩张与推广。', '体验与感知提升': '把可感知收益前置到 3 步内，反馈要即刻可见。', '指标化与可观测性': '先把关键指标与埋点打通，决策要可量化。', '文档/流程与协作': '把决策留痕与流程标准化，确保可复盘。' };
-  const top = cats[0]; els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief) : '';
-  const actionsMap = { '快速 MVP/可用版本': ['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'], '内核重构/技术债偿还': ['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'], '增长实验/新路径': ['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'], '合规与风控': ['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'], '体验与感知提升': ['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'], '指标化与可观测性': ['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'], '文档/流程与协作': ['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏'] };
-  els.nextActions.innerHTML = (top ? actionsMap[top.title]||[] : []).slice(0,3).map(a=>`<div class=\"item\"><div class=\"sub\">${a}</div></div>`).join('');
-  // === 任务解析与排序 ===
-  const tasks = parseTasks(state.task);
-  const matchMap = buildCategoryMatchMap(cats);
-  const tasksSorted = scoreAndSortTasks(tasks, funcW, matchMap);
-  renderTaskList(tasksSorted);
-  // Markdown 导出
-  els.md.textContent = toMarkdown({ type:state.type, phase:state.phase, goals:state.goals, funcWeights:funcW, categories:cats, task:state.task, showExplain: state.showExplain, tasksSorted });
-}
+  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class="item">
+    <div class="kv"><div><b>${c.title}</b></div><div class="sub">${c.score}</div></div>
+    <div class="sub">${c.brief}</div>
+    <div class="bar"><i style="width:${(c.score/maxCat*100).toFixed(1)}%"></i></div>
+    <div class="sub">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div>
+  </div>`).join('');
 
-function bindEvents(){
-  els.type.onchange  = ()=>{ state.type  = els.type.value; computeAndRender(); };
-  els.phase.onchange = ()=>{ state.phase = els.phase.value; computeAndRender(); };
-  els.task.oninput   = ()=>{ state.task  = els.task.value;  computeAndRender(); };
-  els.copyMd.onclick = async ()=>{ try{await navigator.clipboard.writeText(els.md.textContent); alert('Markdown 已复制');}catch{} };
-  els.resetManual.onclick = ()=>{ state.manual = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}; renderManual(); computeAndRender(); };
-  els.saveProfile.onclick = ()=>{ try{ localStorage.setItem('mbti_decider_profile_offline', JSON.stringify(state)); alert('已保存到本地浏览器'); }catch{ alert('保存失败：当前环境可能不支持本地存储'); } };
-  els.loadProfile.onclick = ()=>{ const raw = (()=>{try{return localStorage.getItem('mbti_decider_profile_offline')}catch{return null}})(); if(!raw) return; try{ const j=JSON.parse(raw); Object.assign(state,j); els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task||''; renderGoals(); renderManual(); computeAndRender(); }catch{} };
-  els.exportJSON.onclick = ()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`mbti_decider_profile_${state.type}.json`; a.click(); URL.revokeObjectURL(url); };
-  els.demoBtn.onclick = ()=>{ applyDemo(); };
-  els.explainToggle.onclick = ()=>{ state.showExplain=!state.showExplain; els.explainToggle.textContent = `解释：${state.showExplain?'开启':'关闭'}`; computeAndRender(); };
-  // 主题切换：手动覆盖系统，优先 body.class，兼容 Notion 嵌入
-  els.themeToggle.onclick = ()=>{ const isLight = document.body.classList.contains('theme-light'); setTheme(isLight ? 'dark' : 'light'); };
-}
-
-function applyDemo(){ state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展']; state.task=`给父母体检预约（本周六）
-厨房水槽渗水（影响做饭）
-下周一周会汇报（要做PPT）
-恢复每周两次力量训练
-跟伴侣沟通上周争吵`; state.manual={Ni:0.05, Ne:0.00, Si:0.05, Se:0.00, Fi:0.00, Fe:0.00, Ti:0.10, Te:0.20}; els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task; renderGoals(); renderManual(); computeAndRender(); }
-
-(function(){ try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(raw){ Object.assign(state, JSON.parse(raw)); } }catch{} initSelectors(); els.task.value = state.task || ''; bindEvents(); const isLight = document.body.classList.contains('theme-light'); els.themeToggle.textContent = '切换主题：' + (isLight?'白天':'夜晚'); applyGroupThemeByType(state.type); computeAndRender(); })();
-
-// ======= 任务解析/评分/渲染 =======
-function parseTasks(raw){\n  if(!raw) return [];\n  let text = String(raw).replace(/\\u00A0/g,' ').trim();\n  // 先按换行切分（\\r?\\n 兼容 Win/Mac）\n  let parts = text.split(/\\r?\\n+/);\n  // 若只有一段，再按常见的中英文分隔符切分\n  if(parts.length<=1){\n    parts = text.split(/[;；。\\.、，,\\u2022\\u2023\\u25E6\\u2043\\-\\u2013\\u2014]+/);\n  }\n  return parts\n    .map(s=>s.trim())\n    .map(s=>s.replace(/^[\\-•·\\u2022\\u2023\\u25E6\\u2043]+\\s*/, '')) // 去掉行首项目符号\n    .filter(Boolean)\n    .map(t=>({text:t}));\n}\n行切分（\r?\n 兼容 Win/Mac）
-  let parts = text.split(/\r?\n+/);
-  // 若只有一段，再按常见的中英文分隔符切分
-  if(parts.length<=1){
-    parts = text.split(/[;；。\.、，,\u2022\u2023\u25E6\u2043\-\u2013\u2014]+/);
-  }
-  return parts
-    .map(s=>s.trim())
-    .map(s=>s.replace(/^[\-•·\u2022\u2023\u25E6\u2043]+\s*/, '')) // 去掉行首项目符号
-    .filter(Boolean)
-    .map(t=>({text:t}));
-}
-function pickEffort(text){
-  const small=/^([一-龥]{0,6})?(预约|电话|发(送)?邮件|改文案|整理|回复|下单|取件|缴费|买菜|取药)/;
-  const big=/(重构|重写|系统|方案|汇报PPT|论文|复盘|装修|迁移|体检陪同|出差|合同|对接|集成|培训)/;
-  if(big.test(text)) return 1.5; if(small.test(text)) return 0.6; return 1.0;
-}
-function pickUrgency(text){
-  if(/今天|今晚|立刻|马上|尽快|DDL|截止|明天|本周[一二三四五六日天]?|周[一二三四五六日天]/i.test(text)) return 1.0;
-  if(/下周|这月|本月|近期|尽早/.test(text)) return 0.7; if(/长期|了解|学习|研究|以后/.test(text)) return 0.4; return 0.5;
-}
-function pickImpact(text){
-  if(/体检|健康|漏水|维修|安全|客户|合同|面试|考试|交付|合规|隐私|账号|支付/.test(text)) return 1.0;
-  if(/汇报|PPT|优化|整理资料|备份|备考|训练|运动|学习计划/.test(text)) return 0.7; return 0.5;
-}
-function buildCategoryMatchMap(cats){
-  const norm = (x)=> x/Math.max(1, (cats[0]?.score||100)); // 最高归一化
-  return {
-    mvp: norm(cats.find(c=>c.key==='mvp')?.score||0),
-    refactor: norm(cats.find(c=>c.key==='refactor')?.score||0),
-    growth: norm(cats.find(c=>c.key==='growth')?.score||0),
-    compliance: norm(cats.find(c=>c.key==='compliance')?.score||0),
-    experience: norm(cats.find(c=>c.key==='experience')?.score||0),
-    analytics: norm(cats.find(c=>c.key==='analytics')?.score||0),
-    docs: norm(cats.find(c=>c.key==='docs')?.score||0)
+  const summaryMap={
+    '快速 MVP/可用版本':'先做能跑起来的版本，灰度上线并预留回退。',
+    '内核重构/技术债偿还':'优先修内核与债务，保证稳定与可维护性。',
+    '增长实验/新路径':'先开实验槽位，跑两条主假设，择优放大。',
+    '合规与风控':'把合规与审计补齐，再考虑扩张与推广。',
+    '体验与感知提升':'把可感知收益前置到 3 步内，反馈要即刻可见。',
+    '指标化与可观测性':'先把关键指标与埋点打通，决策要可量化。',
+    '文档/流程与协作':'把决策留痕与流程标准化，确保可复盘。'
   };
+  els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief) : '';
+  const actionsMap={
+    '快速 MVP/可用版本':['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'],
+    '内核重构/技术债偿还':['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'],
+    '增长实验/新路径':['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'],
+    '合规与风控':['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'],
+    '体验与感知提升':['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'],
+    '指标化与可观测性':['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'],
+    '文档/流程与协作':['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏']
+  };
+  els.nextActions.innerHTML = (top?actionsMap[top.title]||[]:[]).slice(0,3).map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('');
+
+  /* 任务优先队列（根据内容自动排序） */
+  const tasks = parseTasks(state.task);
+  const tasksSorted = scoreTaskArray(tasks, top);
+  const tq = tasksSorted.length ? tasksSorted : [];
+  const maxScore = Math.max(1, ...tq.map(t=>t.score));
+  els.taskQueue.innerHTML = tq.slice(0,10).map(t=>`
+    <div class="item">
+      <div class="kv"><div>${t.text}</div><div class="sub">${t.score.toFixed(1)}</div></div>
+      <div class="bar"><i style="width:${(t.score/maxScore*100).toFixed(1)}%"></i></div>
+      <div class="sub">紧急:${(t.u*100).toFixed(0)}% ｜ 影响:${(t.i*100).toFixed(0)}% ｜ 努力:${t.e.toFixed(1)} ｜ 匹配:${t.matchLabel}</div>
+    </div>
+  `).join('') || `<div class="sub">（未检测到可排序的任务，每行一条）</div>`;
+
+  /* 导出 Markdown */
+  els.md.textContent = toMarkdown({
+    type:state.type, phase:state.phase, goals:state.goals,
+    funcWeights:funcW, categories:cats, task:state.task,
+    showExplain:state.showExplain, tasksSorted
+  });
 }
-function mapTextToCategory(text){
-  if(/重构|债|重写|架构|内核|技术/.test(text)) return 'refactor';
-  if(/合规|隐私|风控|权限|实名|审计/.test(text)) return 'compliance';
-  if(/上线|MVP|灰度|回退|发布|修复|Bug|报修|预约|缴费/.test(text)) return 'mvp';
-  if(/增长|拉新|转化|广告|投放|活动|渠道/.test(text)) return 'growth';
-  if(/体验|UI|动效|无障碍|可用性|首屏|卡顿|沟通|关系|约会|家人|伴侣/.test(text)) return 'experience';
-  if(/埋点|指标|监控|日志|看板|报表|A\/B|复盘/.test(text)) return 'analytics';
-  if(/文档|流程|规范|ADR|会议纪要|笔记|作业|论文|备考/.test(text)) return 'docs';
-  return 'mvp';
+
+/* ========== 事件绑定 ========== */
+function bindEvents(){
+  els.type.onchange = ()=>{ state.type=els.type.value; computeAndRender(); };
+  els.phase.onchange= ()=>{ state.phase=els.phase.value; computeAndRender(); };
+  els.task.oninput  = ()=>{ state.task=els.task.value; computeAndRender(); };
+  els.resetManual.onclick = ()=>{ state.manual={Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}; renderManual(); computeAndRender(); };
+  els.saveProfile.onclick = ()=>{ try{ localStorage.setItem('mbti_decider_profile_offline', JSON.stringify(state)); alert('已保存到本地浏览器'); }catch{ alert('保存失败：环境不支持 localStorage'); } };
+  els.loadProfile.onclick = ()=>{ try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(!raw) return; Object.assign(state, JSON.parse(raw)); els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task||''; renderGoals(); renderManual(); computeAndRender(); }catch{} };
+  els.exportJSON.onclick = ()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`mbti_decider_profile_${state.type}.json`; a.click(); URL.revokeObjectURL(url); };
+  els.demoBtn.onclick = ()=>{ state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展']; state.task=`给父母体检预约（周六）
+厨房水槽渗水（影响做饭）
+下周一周会汇报（PPT）
+恢复每周两次力量训练
+跟伴侣沟通上周争吵`; state.manual={Ni:0.05,Ne:0,Si:0.05,Se:0,Fi:0,Fe:0,Ti:0.10,Te:0.20}; els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task; renderGoals(); renderManual(); computeAndRender(); };
+  els.copyMd.onclick = async()=>{ try{ await navigator.clipboard.writeText(els.md.textContent); alert('Markdown 已复制'); }catch{ alert('复制失败，可手动全选复制'); } };
+  els.explainToggle.onclick = ()=>{ state.showExplain=!state.showExplain; computeAndRender(); };
 }
-function scoreAndSortTasks(tasks, funcW, matchMap){
-  const scored = tasks.map(t=>{
-    const u = pickUrgency(t.text); // 0~1
-    const i = pickImpact(t.text);  // 0~1
-    const e = pickEffort(t.text);  // 0.6/1.0/1.5
-    const cat = mapTextToCategory(t.text);
-    const f = clamp01(matchMap[cat]||0.5); // 与当前“类别优先级”匹配度
-    const score = ((i*0.5 + u*0.4 + f*0.1) / e) * 100; // 0~100+
-    return {...t, u,i,e, f, score, matchLabel:cat.toUpperCase()};
-  }).sort((a,b)=> b.score - a.score);
-  return scored;
-}
-function renderTaskList(list){
-  if(!els.taskList) return; if(!list.length){ els.taskList.innerHTML = '<div class="item sub">（请输入任务：一行一条）</div>'; return; }
-  els.taskList.innerHTML = list.map(t=>`<div class="item"><div class="kv"><div>${t.text}</div><div class="sub">${t.score.toFixed(1)}</div></div><div class="sub">紧急:${(t.u*100).toFixed(0)}% · 影响:${(t.i*100).toFixed(0)}% · 努力:${t.e.toFixed(1)} · 匹配:${t.matchLabel}</div></div>`).join('');
-}
+
+/* ========== 启动 ========== */
+(function(){
+  try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(raw) Object.assign(state, JSON.parse(raw)); }catch{}
+  // 初始化下拉与滑条
+  initSelectors(); bindEvents(); els.task.value=state.task||'';
+  // 色系与首次渲染
+  applyGroupThemeByType(state.type); computeAndRender();
+})();
 </script>
 </body>
 </html>
+
