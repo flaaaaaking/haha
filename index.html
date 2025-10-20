@@ -58,6 +58,9 @@
   .sub{color:var(--muted);font-size:12px}
   .list{display:grid;gap:10px}
   .item{border:1px solid var(--line);border-radius:12px;padding:10px}
+/* 进度条：用于功能权重 & 类别得分 */
+.bar{position:relative;height:8px;background:var(--chip);border:1px solid var(--chipbd);border-radius:999px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--brand-acc)}
   pre{white-space:pre-wrap;background:var(--code);border:1px solid var(--line);
       border-radius:12px;padding:10px;max-height:320px;overflow:auto}
   footer{color:var(--muted);text-align:center;font-size:12px;padding:24px 0}
@@ -263,40 +266,20 @@ function scoreCategories(funcW){
 }
 
 function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,tasksSorted}){
-  const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join("
-");
-  const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}
-> ${c.brief}
-来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(" · ")).join("
-
-");
-  const expNote = showExplain?"（含解释）":"（简洁版）";
-  const tasksMd = (tasksSorted||[]).map((t,i)=>`${i+1}. ${t.text}  \
-   · 紧急度:${(t.u*100).toFixed(0)}%｜影响力:${(t.i*100).toFixed(0)}%｜努力:${t.e.toFixed(1)}  \
-   · 匹配:${t.matchLabel}｜总分:${t.score.toFixed(2)}`).join("
-");
-  return `# 决策报告 ${expNote}
-
-**类型**：${type}    **阶段**：${phase.replace("0_1","0→1")}    **目标**：${goals.join(" / ")||"未选"}
-
-**任务**：
-${(task||'').trim()||"（未填写）"}
-
----
-
-## 任务优先队列（高→低）
-${tasksMd||"（未检测到可排序的任务，每行一条）"}
-
----
-
-## 功能权重
-${fw}
-
----
-
-## 建议优先级（Top 6）
-${cats}
-`;
+  const fw = Object.entries(funcWeights)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`)
+    .join('\n');
+  const cats = categories.slice(0,6)
+    .map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · '))
+    .join('\n\n');
+  const expNote = showExplain? '（含解释）' : '（简洁版）';
+  const tasksMd = (tasksSorted||[])
+    .map((t,i)=>`${i+1}. ${t.text}  ` +
+                 `· 紧急度:${(t.u*100).toFixed(0)}%｜影响力:${(t.i*100).toFixed(0)}%｜努力:${t.e.toFixed(1)}  ` +
+                 `· 匹配:${t.matchLabel}｜总分:${t.score.toFixed(2)}`)
+    .join('\n');
+  return `# 决策报告 ${expNote}\n\n**类型**：${type}    **阶段**：${phase.replace('0_1','0→1')}    **目标**：${goals.join(' / ')||'未选'}\n\n**任务**：\n${(task||'').trim()||'（未填写）'}\n\n---\n\n## 任务优先队列（高→低）\n${tasksMd||'（未检测到可排序的任务，每行一条）'}\n\n---\n\n## 功能权重\n${fw}\n\n---\n\n## 建议优先级（Top 6）\n${cats}\n`;
 }
 
 const $ = s => document.querySelector(s);
@@ -310,7 +293,7 @@ const els = {
   taskList: $('#taskList')
 };
 
-const state = { type: 'INTJ', phase: '0_1', goals: ['效率','可扩展'], task: '', manual: {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}, showExplain: false };
+const state = { type: 'INTJ', phase: '0_1', goals: ['效率','可扩展'], task: '', manual: {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}, showExplain: true };
 
 function initSelectors(){
   els.type.innerHTML = Object.keys(MBTI_STACKS).map(t=>`<option value="${t}">${t}（${MBTI_STACKS[t].join('-')}）</option>`).join('');
@@ -329,10 +312,27 @@ function applyGroupThemeByType(type){ const g = GROUP_BY_TYPE[type] || 'analysts
 function computeAndRender(){
   applyGroupThemeByType(state.type);
   const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual);
-  els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{ const d = FUNC_DESC[f]; const detail = state.showExplain ? `<div class=\"sub\">输入：${d.in}</div><div class=\"sub\">评估：${d.eval}</div><div class=\"sub\">输出：${d.out}</div>` : ''; return `<div class=\"item\"><div class=\"kv\"><div><b>${f}</b></div><div class=\"sub\">${(v*100).toFixed(1)}%</div></div>${detail}</div>` }).join('');
+  const maxFW = Math.max(...Object.values(funcW),0.0001);
+els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
+  const d = FUNC_DESC[f];
+  const pct = (v*100).toFixed(1)+'%';
+  const bar = `<div class="bar"><i style="width:${(v/maxFW*100).toFixed(1)}%"></i></div>`;
+  const detail = state.showExplain ? `<div class=\"sub\">输入：${d.in}</div><div class=\"sub\">评估：${d.eval}</div><div class=\"sub\">输出：${d.out}</div>` : '';
+  return `<div class=\"item\">
+    <div class=\"kv\"><div><b>${f}</b></div><div class=\"sub\">${pct}</div></div>
+    ${bar}
+    ${detail}
+  </div>`
+}).join('');
   els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
   const cats = scoreCategories(funcW);
-  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class=\"item\"><div class=\"kv\"><div><b>${c.title}</b></div><div class=\"sub\">${c.score}</div></div><div class=\"sub\">${c.brief}</div><div class=\"sub\">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div></div>`).join('');
+  const maxCat = Math.max(1, ...cats.map(c=>c.score));
+els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class=\"item\">
+  <div class=\"kv\"><div><b>${c.title}</b></div><div class=\"sub\">${c.score}</div></div>
+  <div class=\"sub\">${c.brief}</div>
+  <div class=\"bar\"><i style=\"width:${(c.score/maxCat*100).toFixed(1)}%\"></i></div>
+  <div class=\"sub\">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div>
+</div>`).join('');
   const summaryMap = { '快速 MVP/可用版本': '先做能跑起来的版本，灰度上线并预留回退。', '内核重构/技术债偿还': '优先修内核与债务，保证稳定与可维护性。', '增长实验/新路径': '先开实验槽位，跑两条主假设，择优放大。', '合规与风控': '把合规与审计补齐，再考虑扩张与推广。', '体验与感知提升': '把可感知收益前置到 3 步内，反馈要即刻可见。', '指标化与可观测性': '先把关键指标与埋点打通，决策要可量化。', '文档/流程与协作': '把决策留痕与流程标准化，确保可复盘。' };
   const top = cats[0]; els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief) : '';
   const actionsMap = { '快速 MVP/可用版本': ['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'], '内核重构/技术债偿还': ['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'], '增长实验/新路径': ['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'], '合规与风控': ['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'], '体验与感知提升': ['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'], '指标化与可观测性': ['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'], '文档/流程与协作': ['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏'] };
@@ -370,9 +370,17 @@ function applyDemo(){ state.type='INTJ'; state.phase='0_1'; state.goals=['效率
 (function(){ try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(raw){ Object.assign(state, JSON.parse(raw)); } }catch{} initSelectors(); els.task.value = state.task || ''; bindEvents(); const isLight = document.body.classList.contains('theme-light'); els.themeToggle.textContent = '切换主题：' + (isLight?'白天':'夜晚'); applyGroupThemeByType(state.type); computeAndRender(); })();
 
 // ======= 任务解析/评分/渲染 =======
-function parseTasks(raw){
-  return (raw||'').split(/
-+/).map(s=>s.trim()).filter(Boolean).map(t=>({text:t}));
+function parseTasks(raw){\n  if(!raw) return [];\n  let text = String(raw).replace(/\\u00A0/g,' ').trim();\n  // 先按换行切分（\\r?\\n 兼容 Win/Mac）\n  let parts = text.split(/\\r?\\n+/);\n  // 若只有一段，再按常见的中英文分隔符切分\n  if(parts.length<=1){\n    parts = text.split(/[;；。\\.、，,\\u2022\\u2023\\u25E6\\u2043\\-\\u2013\\u2014]+/);\n  }\n  return parts\n    .map(s=>s.trim())\n    .map(s=>s.replace(/^[\\-•·\\u2022\\u2023\\u25E6\\u2043]+\\s*/, '')) // 去掉行首项目符号\n    .filter(Boolean)\n    .map(t=>({text:t}));\n}\n行切分（\r?\n 兼容 Win/Mac）
+  let parts = text.split(/\r?\n+/);
+  // 若只有一段，再按常见的中英文分隔符切分
+  if(parts.length<=1){
+    parts = text.split(/[;；。\.、，,\u2022\u2023\u25E6\u2043\-\u2013\u2014]+/);
+  }
+  return parts
+    .map(s=>s.trim())
+    .map(s=>s.replace(/^[\-•·\u2022\u2023\u25E6\u2043]+\s*/, '')) // 去掉行首项目符号
+    .filter(Boolean)
+    .map(t=>({text:t}));
 }
 function pickEffort(text){
   const small=/^([一-龥]{0,6})?(预约|电话|发(送)?邮件|改文案|整理|回复|下单|取件|缴费|买菜|取药)/;
