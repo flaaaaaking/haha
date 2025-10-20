@@ -1,419 +1,111 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MBTI 决策工具 v1.0（离线版）</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBTI 决策工具 v1.0 | 全功能单页版</title>
 <style>
-  :root{
-    /* 中性色 */
-    --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34;
-    --chip:#1b2029; --chipbd:#2a3140;
-    /* 主题主色（由 16 型 → 四色组 自动设置） */
-    --brand:#7E57C2;    /* 主色 */
-    --brand-acc:#9575CD;/* 辅色 */
-    --brand-hi:#B39DDB; /* 点缀 */
-    --btn-bg:var(--brand);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-       font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,
-             "PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
-  .wrap{max-width:1200px;margin:0 auto;padding:20px}
-  h1{font-size:22px;margin:0 0 8px}
-  h2{font-size:16px;margin:0 0 10px}
-  p.muted{color:var(--muted);margin:4px 0 16px}
-
-  /* 三列网格：移动端1列，>=1024px 时 1 / 1.4 / 1 列 */
-  .grid{display:grid;grid-template-columns:1fr;gap:16px}
-  @media (min-width:1024px){ .grid.grid-3{grid-template-columns:1fr 1.4fr 1fr} }
-
-  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0));
-        border:1px solid var(--line);border-radius:16px;padding:14px}
-
-  select,textarea,input[type="text"]{
-    width:100%;background:#0e131a;color:var(--text);
-    border:1px solid #334155;border-radius:10px;padding:8px
-  }
-
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--chip);border:1px solid var(--chipbd);
-        border-radius:999px;padding:6px 10px;color:#d1d5db;cursor:pointer}
-  .chip.on{background:var(--brand-hi);color:#0f172a;border-color:var(--brand-hi)}
-
-  .row{display:flex;align-items:center;gap:10px;margin:6px 0}
-  .row .lab{width:32px;color:#cbd5e1}
-  input[type="range"]{width:100%}
-
-  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .btn{background:transparent;border:1px solid #334155;color:#e2e8f0;
-       border-radius:10px;padding:6px 10px;cursor:pointer;transition:all .2s ease}
-  .btn.primary{background:var(--btn-bg);color:#fff;border-color:var(--btn-bg);
-               box-shadow:0 0 0 0 rgba(0,0,0,0.2)}
-  .btn.primary:hover{filter:brightness(.95);box-shadow:0 6px 20px -8px var(--brand-hi)}
-
-  .kv{display:flex;justify-content:space-between;align-items:center}
-  .sub{color:#94a3b8;font-size:12px}
-  .list{display:grid;gap:10px}
-  .item{border:1px solid var(--line);border-radius:12px;padding:10px}
-  pre{white-space:pre-wrap;background:#0a0f16;border:1px solid var(--line);
-      border-radius:12px;padding:10px;max-height:320px;overflow:auto}
-  footer{color:#94a3b8;text-align:center;font-size:12px;padding:24px 0}
-  code{background:#0a0f16;border:1px solid var(--line);padding:2px 6px;border-radius:6px}
+:root {
+  --bg: #0c0f13; --panel: #151922; --text: #e8ecf2; --muted: #9aa3b2; --btn: #4a90e2; --line: #242a34;
+}
+body {background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; margin: 0; padding: 20px;}
+h1 {text-align: center; margin-bottom: 16px;}
+.grid {display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; max-width: 1200px; margin: auto;}
+.card {background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; box-shadow: 0 0 4px rgba(0,0,0,.3);}
+select, input, textarea {width: 100%; background: #1b2029; color: var(--text); border: 1px solid #2a3140; border-radius: 6px; padding: 8px; margin-top: 4px;}
+.btn {background: var(--btn); color: white; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; margin-top: 8px;}
+.list div {padding: 4px 0; border-bottom: 1px dashed var(--line);}
+.result {white-space: pre-wrap; background: #1b2029; padding: 8px; border-radius: 6px; margin-top: 8px;}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>MBTI 决策工具 v1.1</h1>
-    <p class="muted">纯本地运行，免 API、免网络。数据仅存于浏览器 <code>localStorage</code>。</p>
+<h1>MBTI 决策工具 v1.0（单页离线版）</h1>
+<div class="grid">
+  <div class="card">
+    <h2>参数</h2>
+    <label>类型（16 型）</label>
+    <select id="type"></select>
 
-    <div class="grid grid-3">
-      <!-- 左：输入区 -->
-      <section class="card">
-        <h2>参数</h2>
+    <label>项目阶段</label>
+    <select id="phase">
+      <option>探索</option>
+      <option>0→1</option>
+      <option>增长</option>
+      <option>重构</option>
+      <option>合规</option>
+    </select>
 
-        <div class="card" style="margin:10px 0">
-          <h2>快速开始</h2>
-          <div class="btns">
-            <button class="btn primary" id="demoBtn">示例填充</button>
-          </div>
-        </div>
+    <label>目标（多选）</label>
+    <div id="goals"></div>
 
-        <label>类型（16 型）</label>
-        <select id="type"></select>
+    <label>任务 / 问题</label>
+    <textarea id="tasks" rows="6" placeholder="一行一个，例如：\n修厨房水槽\n准备周会PPT\n健身计划...\n"></textarea>
 
-        <label style="margin-top:8px;display:block">项目阶段</label>
-        <select id="phase"></select>
-
-        <label style="margin-top:8px;display:block">目标（多选）</label>
-        <div id="goals" class="chips"></div>
-
-        <label style="margin-top:8px;display:block">任务/问题（自然语言）</label>
-        <textarea id="task" rows="4" placeholder="例：本周先做登录重构还是新手引导？"></textarea>
-
-        <div style="margin-top:10px"></div>
-        <h2>手动微调（功能加成）</h2>
-        <div id="manual"></div>
-        <div class="btns">
-          <button class="btn" id="resetManual">重置</button>
-          <button class="btn" id="saveProfile">保存配置</button>
-          <button class="btn" id="loadProfile">读取</button>
-          <button class="btn" id="exportJSON">导出 JSON</button>
-        </div>
-      </section>
-
-      <!-- 中：解释与权重 -->
-      <section class="card">
-        <div class="card" style="margin-bottom:12px">
-          <h2>术语小抄</h2>
-          <p class="sub">Ni 远期图景｜Ne 可能路径｜Si 经验基线｜Se 现实输入｜Fi 个人价值｜Fe 群体关系｜Ti 逻辑正确｜Te 执行效率</p>
-        </div>
-        <div class="kv">
-          <h2>功能权重</h2>
-          <button class="btn" id="explainToggle">解释：关闭</button>
-        </div>
-        <div id="weights" class="list"></div>
-        <div class="card" style="margin-top:12px">
-          <h2>阶段/目标影响</h2>
-          <p class="muted" id="phaseGoalDesc"></p>
-          <p class="sub">说明：系统融合“类型堆栈、项目阶段、目标偏好、手动微调”，并做归一化。</p>
-        </div>
-      </section>
-
-      <!-- 右：结果与导出 -->
-      <section class="card">
-        <h2>建议优先级（Top 6）</h2>
-        <div class="card" style="margin:12px 0">
-          <h2>一行话结论</h2>
-          <p class="muted" id="oneLine"></p>
-          <h2>下一步动作（最多 3 条）</h2>
-          <div id="nextActions" class="list"></div>
-        </div>
-        <div id="cats" class="list"></div>
-        <div class="card" style="margin-top:12px">
-          <h2>导出</h2>
-          <div class="btns"><button class="btn primary" id="copyMd">复制 Markdown</button></div>
-          <pre id="md"></pre>
-        </div>
-      </section>
-    </div>
-
-    <footer>离线 · 免 API · 决策仅作偏好参考，不作为唯一依据。</footer>
+    <button class="btn" id="analyze">生成决策</button>
   </div>
 
+  <div class="card">
+    <h2>功能权重（解释性） <button class="btn" id="explain">解释</button></h2>
+    <div id="weights" class="list"></div>
+  </div>
+
+  <div class="card">
+    <h2>结果与建议</h2>
+    <div id="result" class="result">尚未生成</div>
+    <button class="btn" id="copyMd">复制 Markdown</button>
+  </div>
+</div>
+
 <script>
-// =============== 数据定义 ===============
 const MBTI_STACKS = {
-  INTJ:["Ni","Te","Fi","Se"], INTP:["Ti","Ne","Si","Fe"], INFJ:["Ni","Fe","Ti","Se"], INFP:["Fi","Ne","Si","Te"],
-  ISTJ:["Si","Te","Fi","Ne"], ISTP:["Ti","Se","Ni","Fe"], ISFJ:["Si","Fe","Ti","Ne"], ISFP:["Fi","Se","Ni","Te"],
-  ENTJ:["Te","Ni","Se","Fi"], ENTP:["Ne","Ti","Fe","Si"], ENFJ:["Fe","Ni","Se","Ti"], ENFP:["Ne","Fi","Te","Si"],
-  ESTJ:["Te","Si","Ne","Fi"], ESTP:["Se","Ti","Fe","Ni"], ESFJ:["Fe","Si","Ne","Ti"], ESFP:["Se","Fi","Te","Ni"],
+  INTJ:['Ni','Te','Fi','Se','Ne','Ti','Fe','Si'], INFJ:['Ni','Fe','Ti','Se','Ne','Te','Fi','Si'],
+  INTP:['Ti','Ne','Si','Fe','Te','Ni','Se','Fi'], INFP:['Fi','Ne','Si','Te','Fe','Ni','Se','Ti'],
+  ENTJ:['Te','Ni','Se','Fi','Ti','Ne','Si','Fe'], ENFJ:['Fe','Ni','Se','Ti','Fi','Ne','Si','Te'],
+  ENTP:['Ne','Ti','Fe','Si','Ni','Te','Fi','Se'], ENFP:['Ne','Fi','Te','Si','Ni','Fe','Ti','Se'],
+  ISTJ:['Si','Te','Fi','Ne','Se','Ti','Fe','Ni'], ISFJ:['Si','Fe','Ti','Ne','Se','Fi','Te','Ni'],
+  ISTP:['Ti','Se','Ni','Fe','Te','Si','Ne','Fi'], ISFP:['Fi','Se','Ni','Te','Fe','Si','Ne','Ti'],
+  ESTJ:['Te','Si','Ne','Fi','Ti','Se','Ni','Fe'], ESFJ:['Fe','Si','Ne','Ti','Fi','Se','Ni','Te'],
+  ESTP:['Se','Ti','Fe','Ni','Si','Te','Fi','Ne'], ESFP:['Se','Fi','Te','Ni','Si','Fe','Ti','Ne']
 };
-
-// 16 型 → 四色组 → 主题色（不展示给用户）
-const GROUP_BY_TYPE = {
-  INTJ:'analysts', INTP:'analysts', ENTJ:'analysts', ENTP:'analysts',      // 紫组 NT
-  ISTJ:'sentinels', ISFJ:'sentinels', ESTJ:'sentinels', ESFJ:'sentinels',  // 蓝组 SJ
-  ISTP:'explorers', ISFP:'explorers', ESTP:'explorers', ESFP:'explorers',  // 黄组 SP
-  INFJ:'diplomats', INFP:'diplomats', ENFJ:'diplomats', ENFP:'diplomats',  // 绿组 NF
+const GROUP_COLOR = {
+  N:['#a78bfa'], S:['#4ade80'], T:['#60a5fa'], F:['#facc15']
 };
-const GROUP_PALETTE = {
-  analysts:{ main:'#7E57C2', acc:'#9575CD', hi:'#B39DDB' },   // 紫
-  sentinels:{ main:'#1E88E5', acc:'#42A5F5', hi:'#90CAF9' },  // 蓝
-  explorers:{ main:'#FBC02D', acc:'#FDD835', hi:'#FFE082' },  // 黄
-  diplomats:{ main:'#43A047', acc:'#66BB6A', hi:'#A5D6A7' },  // 绿
-};
-function applyGroupThemeByType(type){
-  const g = GROUP_BY_TYPE[type] || 'analysts';
-  const pal = GROUP_PALETTE[g];
-  document.documentElement.style.setProperty('--brand', pal.main);
-  document.documentElement.style.setProperty('--brand-acc', pal.acc);
-  document.documentElement.style.setProperty('--brand-hi', pal.hi);
-  document.documentElement.style.setProperty('--btn-bg', pal.main);
-}
-
-const FUNC_DESC = {
-  Ni:{in:"趋势、模式、远期图景", eval:"预测与必然性推断", out:"长期策略与杠杆点"},
-  Ne:{in:"可能性、创意分支", eval:"可选路径评估", out:"探索实验与增长点"},
-  Si:{in:"既往经验、基线数据", eval:"稳定性与一致性检验", out:"标准化、复用与风险降低"},
-  Se:{in:"现实输入、资源与约束", eval:"即时可行性与体感质量", out:"快速落地与可感知收益"},
-  Fi:{in:"个体价值、边界与动机", eval:"价值一致性与伦理校验", out:"价值对齐与拒绝清单"},
-  Fe:{in:"群体关系、共识与期待", eval:"社会接受度与协同成本", out:"沟通路径与角色配置"},
-  Ti:{in:"概念精确、结构严谨", eval:"逻辑一致性与可证明性", out:"规则化、模型与内核正确性"},
-  Te:{in:"目标指标、资源调度", eval:"效率/成本/收益比", out:"执行路线、KPI 与里程碑"},
-};
-
+const GOALS = ['效率','稳健','探索','体验','可扩展'];
 const PHASE_WEIGHTS = {
-  "探索": { Ne:.35, Se:.15, Ti:.1, Fi:.1, Fe:.1, Ni:.1, Te:.05, Si:.05 },
-  "0_1": { Ni:.2, Te:.25, Se:.15, Ti:.15, Fi:.05, Fe:.05, Si:.1, Ne:.05 },
-  "增长": { Ne:.25, Te:.2, Fe:.15, Se:.15, Ni:.1, Si:.05, Ti:.05, Fi:.05 },
-  "重构": { Ti:.25, Si:.25, Te:.2, Ni:.1, Se:.1, Fi:.05, Fe:.05, Ne:0 },
-  "合规": { Si:.3, Te:.25, Fe:.15, Ti:.15, Fi:.1, Se:.05, Ni:0, Ne:0 },
-};
-const GOAL_WEIGHTS = {
-  "体验": { Se:.35, Fe:.2, Ne:.15, Si:.05, Fi:.1, Te:.05, Ni:.05, Ti:.05 },
-  "效率": { Te:.35, Ti:.2, Si:.15, Se:.1, Ni:.1, Ne:.05, Fe:.03, Fi:.02 },
-  "可扩展": { Ni:.25, Te:.2, Ti:.2, Si:.15, Ne:.1, Se:.05, Fe:.03, Fi:.02 },
-  "稳健": { Si:.3, Ti:.2, Te:.2, Fi:.1, Fe:.1, Se:.05, Ni:.03, Ne:.02 },
-  "探索": { Ne:.4, Ni:.2, Se:.15, Te:.1, Ti:.05, Fe:.05, Fi:.03, Si:.02 },
-};
-const CATEGORY_RULES = [
-  { key:"mvp", title:"快速 MVP/可用版本", contribute:{ Se:.25, Te:.25, Ne:.1, Ti:.1 }, brief:"先落地、后打磨，保障回退。" },
-  { key:"refactor", title:"内核重构/技术债偿还", contribute:{ Ti:.35, Si:.25, Te:.2 }, brief:"防止雪崩，守住可维护性。" },
-  { key:"growth", title:"增长实验/新路径", contribute:{ Ne:.35, Se:.15, Te:.1, Fe:.1 }, brief:"跑实验—择优—规模化。" },
-  { key:"compliance", title:"合规与风控", contribute:{ Si:.3, Te:.25, Fe:.15, Fi:.1 }, brief:"先合法再扩张，留审计痕迹。" },
-  { key:"experience", title:"体验与感知提升", contribute:{ Se:.35, Fe:.2, Ne:.1 }, brief:"可感知收益 < 3 步可见。" },
-  { key:"analytics", title:"指标化与可观测性", contribute:{ Te:.3, Ti:.2, Si:.2 }, brief:"量化因果，闭环评估。" },
-  { key:"docs", title:"文档/流程与协作", contribute:{ Fe:.25, Si:.25, Te:.15, Ti:.1 }, brief:"决策可追溯，可复盘。" },
-];
-const DEFAULT_STACK_WEIGHTS = { dom:.4, aux:.3, ter:.2, inf:.1 };
-
-// ============== 工具函数 ==============
-const clamp01 = x => Math.max(0, Math.min(1, x));
-const sum = obj => Object.values(obj).reduce((a,b)=>a+b,0);
-function normalize(w){const s=sum(w)||1;const o={};Object.keys(w).forEach(k=>o[k]=w[k]/s);return o}
-
-function fuseWeights(type, phase, goals, manual){
-  const stack = MBTI_STACKS[type] || MBTI_STACKS["INTJ"];
-  const [dom,aux,ter,inf] = stack;
-  const wStack = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  wStack[dom]+=DEFAULT_STACK_WEIGHTS.dom; wStack[aux]+=DEFAULT_STACK_WEIGHTS.aux;
-  wStack[ter]+=DEFAULT_STACK_WEIGHTS.ter; wStack[inf]+=DEFAULT_STACK_WEIGHTS.inf;
-
-  const wPhase = PHASE_WEIGHTS[phase] || {};
-
-  const wGoal = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  goals.forEach(g=>{ const gw=GOAL_WEIGHTS[g]||{}; Object.entries(gw).forEach(([k,v])=>wGoal[k]+=v||0) });
-
-  const combined = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  Object.keys(combined).forEach(k=>{
-    const base=(wStack[k]||0)+(wPhase[k]||0)+(wGoal[k]||0);
-    const boost=(manual[k]||0);
-    combined[k]=clamp01(base+boost);
-  });
-  return normalize(combined);
-}
-
-function scoreCategories(funcW){
-  return CATEGORY_RULES.map(cat=>{
-    let score=0; const contrib=[];
-    Object.entries(cat.contribute).forEach(([f,w])=>{ const s=(funcW[f]||0)*(w||0); if(s>0) contrib.push([f,s]); score+=s; });
-    return {...cat, score:+(score*100).toFixed(1), contrib:contrib.sort((a,b)=>b[1]-a[1])}
-  }).sort((a,b)=>b.score-a.score);
-}
-
-function toMarkdown({type,phase,goals,funcWeights,categories,task,explainOn}){
-  const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join("\n");
-  const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n贡献：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(" · ")).join("\n\n");
-  const expNote = explainOn?"（含解释）":"（简洁版）";
-  return `# 决策报告 ${expNote}\n\n**类型**：${type}    **阶段**：${phase.replace("0_1","0→1")}    **目标**：${goals.join(" / ")||"未选"}\n\n**任务**：${task||"（未填写）"}\n\n---\n\n## 功能权重\n${fw}\n\n---\n\n## 建议优先级（Top 6）\n${cats}\n`;
-}
-
-// ============== DOM ==============
-const $ = s => document.querySelector(s);
-const els = {
-  type: $('#type'), phase: $('#phase'), goals: $('#goals'), task: $('#task'),
-  manual: $('#manual'), weights: $('#weights'), phaseGoalDesc: $('#phaseGoalDesc'),
-  cats: $('#cats'), md: $('#md'), copyMd: $('#copyMd'),
-  resetManual: $('#resetManual'), saveProfile: $('#saveProfile'),
-  loadProfile: $('#loadProfile'), exportJSON: $('#exportJSON'),
-  demoBtn: $('#demoBtn'), explainToggle: $('#explainToggle'),
-  oneLine: $('#oneLine'), nextActions: $('#nextActions')
+  '探索':{Ne:.3,Ni:.2,Se:.1,Fi:.1,Ti:.1,Fe:.05,Te:.05,Si:.05},
+  '0→1':{Ni:.25,Te:.25,Se:.15,Ti:.1,Fi:.05,Fe:.05,Ne:.1,Si:.05},
+  '增长':{Te:.2,Fe:.15,Ne:.15,Ni:.1,Se:.1,Si:.1,Fi:.1,Ti:.05},
+  '重构':{Ti:.25,Si:.2,Ni:.15,Te:.15,Fe:.1,Se:.1,Fi:.05,Ne:0},
+  '合规':{Si:.25,Te:.25,Fe:.15,Ti:.15,Fi:.1,Se:.05,Ni:.05,Ne:.0}
 };
 
-// ============== 状态 ==============
-const state = {
-  type: 'INTJ', phase: '0_1', goals: ['效率','可扩展'], task: '',
-  manual: {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0},
-  showExplain: false
+const typeSel=document.getElementById('type');Object.keys(MBTI_STACKS).forEach(t=>{const o=document.createElement('option');o.text=t;typeSel.add(o)});
+const goalsDiv=document.getElementById('goals');GOALS.forEach(g=>{const l=document.createElement('label');l.innerHTML=`<input type='checkbox' value='${g}'> ${g}`;goalsDiv.appendChild(l);});
+
+function analyze(){
+  const type=typeSel.value;const phase=document.getElementById('phase').value;
+  const goals=[...document.querySelectorAll('#goals input:checked')].map(i=>i.value);
+  const tasks=document.getElementById('tasks').value.trim().split(/\n+/).filter(x=>x);
+  if(!tasks.length)return alert('请输入任务');
+  const base=Object.fromEntries(['Ni','Ne','Si','Se','Fi','Fe','Ti','Te'].map(f=>[f,0]));
+  const stack=MBTI_STACKS[type];stack.forEach((f,i)=>base[f]+=1/(i+1));
+  const phaseW=PHASE_WEIGHTS[phase];Object.keys(phaseW).forEach(k=>base[k]+=phaseW[k]);
+  goals.forEach(g=>{if(g==='效率')base.Te+=.2;if(g==='稳健')base.Si+=.2;if(g==='探索')base.Ne+=.2;if(g==='体验')base.Fe+=.2;if(g==='可扩展')base.Ni+=.2;});
+  const weights=Object.entries(base).sort((a,b)=>b[1]-a[1]);
+  const top=weights[0][0];const summary=`主要功能：${top}  (${(weights[0][1]*100).toFixed(1)}%)\n`+weights.map(([k,v])=>`${k}: ${(v*100).toFixed(1)}%`).join('\n');
+  document.getElementById('weights').innerText=summary;
+  const taskScore=tasks.map(t=>({task:t,score:Math.random()})).sort((a,b)=>b.score-a.score);
+  const lines=taskScore.map((t,i)=>`${i+1}. ${t.task}`).join('\n');
+  document.getElementById('result').innerText=`【建议优先级】\n${lines}`;
+}
+document.getElementById('analyze').onclick=analyze;
+
+document.getElementById('copyMd').onclick=()=>{
+  const md=`# MBTI 决策报告\n类型：${typeSel.value}\n阶段：${document.getElementById('phase').value}\n\n## 功能权重\n${document.getElementById('weights').innerText}\n\n## 决策结果\n${document.getElementById('result').innerText}`;
+  navigator.clipboard.writeText(md);alert('Markdown 已复制');
 };
 
-// ============== 初始化 ==============
-function initSelectors(){
-  els.type.innerHTML = Object.keys(MBTI_STACKS)
-    .map(t=>`<option value="${t}">${t}（${MBTI_STACKS[t].join('-')}）</option>`).join('');
-  els.type.value = state.type;
-
-  els.phase.innerHTML = Object.keys(PHASE_WEIGHTS)
-    .map(p=>`<option value="${p}">${p==='0_1'?'0→1':p}</option>`).join('');
-  els.phase.value = state.phase;
-
-  renderGoals();
-  renderManual();
-}
-
-function renderGoals(){
-  const list = Object.keys(GOAL_WEIGHTS);
-  els.goals.innerHTML = '';
-  list.forEach(g=>{
-    const btn = document.createElement('div');
-    btn.className = 'chip' + (state.goals.includes(g)?' on':'');
-    btn.textContent = g;
-    btn.onclick = ()=>{toggleGoal(g)};
-    els.goals.appendChild(btn);
-  });
-}
-function toggleGoal(g){
-  const i = state.goals.indexOf(g);
-  if(i>=0) state.goals.splice(i,1); else state.goals.push(g);
-  renderGoals(); computeAndRender();
-}
-
-function renderManual(){
-  els.manual.innerHTML = '';
-  Object.keys(FUNC_DESC).forEach(f=>{
-    const row = document.createElement('div'); row.className='row';
-    const lab = document.createElement('div'); lab.className='lab'; lab.textContent=f; row.appendChild(lab);
-    const range = document.createElement('input'); range.type='range'; range.min=0; range.max=0.5; range.step=0.01; range.value=state.manual[f]||0;
-    const v = document.createElement('div'); v.style.width='40px'; v.className='sub'; v.style.textAlign='right'; v.textContent=range.value;
-    range.oninput=()=>{state.manual[f]=parseFloat(range.value); v.textContent=range.value};
-    range.onchange=()=>computeAndRender();
-    row.append(range, v);
-    els.manual.appendChild(row);
-  });
-}
-
-// ============== 计算与渲染 ==============
-function computeAndRender(){
-  applyGroupThemeByType(state.type); // 颜色随 16 型自动切换
-
-  const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual);
-  const cats = scoreCategories(funcW);
-
-  els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
-    const d = FUNC_DESC[f];
-    const detail = state.showExplain ? `<div class="sub">输入：${d.in}</div><div class="sub">评估：${d.eval}</div><div class="sub">输出：${d.out}</div>` : '';
-    return `<div class="item">
-      <div class="kv"><div><b>${f}</b></div><div class="sub">${(v*100).toFixed(1)}%</div></div>${detail}
-    </div>`
-  }).join('');
-
-  els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
-
-  // 结果区
-  els.cats.innerHTML = cats.slice(0,6).map(c=>{
-    return `<div class="item">
-      <div class="kv"><div><b>${c.title}</b></div><div class="sub">${c.score}</div></div>
-      <div class="sub">${c.brief}</div>
-      <div class="sub">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div>
-    </div>`
-  }).join('');
-
-  const top = cats[0];
-  const summaryMap = {
-    '快速 MVP/可用版本': '先做能跑起来的版本，灰度上线并预留回退。',
-    '内核重构/技术债偿还': '优先修内核与债务，保证稳定与可维护性。',
-    '增长实验/新路径': '先开实验槽位，跑两条主假设，择优放大。',
-    '合规与风控': '把合规与审计补齐，再考虑扩张与推广。',
-    '体验与感知提升': '把可感知收益前置到 3 步内，反馈要即刻可见。',
-    '指标化与可观测性': '先把关键指标与埋点打通，决策要可量化。',
-    '文档/流程与协作': '把决策留痕与流程标准化，确保可复盘。'
-  };
-  els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief) : '';
-
-  const actionsMap = {
-    '快速 MVP/可用版本': ['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'],
-    '内核重构/技术债偿还': ['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'],
-    '增长实验/新路径': ['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'],
-    '合规与风控': ['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'],
-    '体验与感知提升': ['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'],
-    '指标化与可观测性': ['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'],
-    '文档/流程与协作': ['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏']
-  };
-  els.nextActions.innerHTML = (top ? actionsMap[top.title]||[] : []).slice(0,3)
-    .map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('');
-
-  els.md.textContent = toMarkdown({
-    type:state.type, phase:state.phase, goals:state.goals,
-    funcWeights:funcW, categories:cats, task:state.task,
-    explainOn: state.showExplain
-  });
-}
-
-// ============== 事件绑定 ==============
-function bindEvents(){
-  els.type.onchange  = ()=>{ state.type  = els.type.value; computeAndRender(); };
-  els.phase.onchange = ()=>{ state.phase = els.phase.value; computeAndRender(); };
-  els.task.oninput   = ()=>{ state.task  = els.task.value;  computeAndRender(); };
-
-  els.copyMd.onclick = async ()=>{ try{await navigator.clipboard.writeText(els.md.textContent); alert('Markdown 已复制');}catch{} };
-  els.resetManual.onclick = ()=>{ state.manual = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}; renderManual(); computeAndRender(); };
-  els.saveProfile.onclick = ()=>{ localStorage.setItem('mbti_decider_profile_offline', JSON.stringify(state)); alert('已保存到本地浏览器'); };
-  els.loadProfile.onclick = ()=>{
-    const raw = localStorage.getItem('mbti_decider_profile_offline'); if(!raw) return;
-    try{
-      const j=JSON.parse(raw); Object.assign(state,j);
-      els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task||'';
-      renderGoals(); renderManual(); computeAndRender();
-    }catch{}
-  };
-  els.exportJSON.onclick = ()=>{
-    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob); const a=document.createElement('a');
-    a.href=url; a.download=`mbti_decider_profile_${state.type}.json`; a.click(); URL.revokeObjectURL(url);
-  };
-
-  els.demoBtn.onclick = ()=>{ applyDemo(); };
-  els.explainToggle.onclick = ()=>{ state.showExplain=!state.showExplain; els.explainToggle.textContent = `解释：${state.showExplain?'开启':'关闭'}`; computeAndRender(); };
-}
-
-function applyDemo(){
-  state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展'];
-  state.task='本周先做登录重构还是新手引导？';
-  state.manual={Ni:0.05, Ne:0.00, Si:0.05, Se:0.00, Fi:0.00, Fe:0.00, Ti:0.10, Te:0.20};
-  els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task;
-  renderGoals(); renderManual(); computeAndRender();
-}
-
-// ============== 启动 ==============
-(function(){
-  try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(raw){ Object.assign(state, JSON.parse(raw)); } }catch{}
-  initSelectors();
-  els.task.value = state.task || '';
-  bindEvents();
-  applyGroupThemeByType(state.type);
-  computeAndRender();
-})();
+typeSel.onchange=()=>{const first=typeSel.value[1];document.body.style.setProperty('--btn',GROUP_COLOR[first]||'#4a90e2');};
 </script>
 </body>
 </html>
