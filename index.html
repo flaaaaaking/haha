@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>MBTI 决策工具 v1.1.2</title>
-<meta name="apple-mobile-web-app-title" content="MBTI 决策工具 v1.1.2">
+<title>MBTI 决策工具 v1.1.3</title>
+<meta name="apple-mobile-web-app-title" content="MBTI 决策工具 v1.1.3">
+<meta property="og:title" content="MBTI 决策工具 v1.1.3">
 <style>
 :root{
   --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34;
   --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16;
   --brand:#7E57C2; --brand-acc:#9575CD; --brand-hi:#B39DDB; --btn-bg:var(--brand);
 }
-/* 手动明/暗主题（Notion 友好） */
 body.theme-light{
   --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db;
   --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa;
@@ -87,8 +87,8 @@ code{background:var(--code); border:1px solid var(--line); padding:2px 6px; bord
 <div class="wrap">
   <div class="header">
     <div>
-      <h1>MBTI 决策工具 v1.1.2</h1>
-      <p class="muted">纯本地运行，免 API。数据仅存在 <code>localStorage</code>。</p>
+      <h1>MBTI 决策工具 v1.1.3</h1>
+      <p class="muted">纯本地运行，免 API。数据仅存在 <code>localStorage</code>（Notion 环境将自动降级兼容）。</p>
     </div>
     <div class="btns">
       <button class="btn" id="themeToggle">切换主题：白天</button>
@@ -154,10 +154,8 @@ code{background:var(--code); border:1px solid var(--line); padding:2px 6px; bord
         <div id="nextActions" class="list"></div>
       </div>
 
-      <!-- 类别列表 -->
       <div id="cats" class="list"></div>
 
-      <!-- 任务优先队列（根据内容自动排序） -->
       <div class="card" style="margin-top:12px">
         <h3>任务优先队列（高→低）</h3>
         <div id="taskQueue" class="list"></div>
@@ -175,24 +173,47 @@ code{background:var(--code); border:1px solid var(--line); padding:2px 6px; bord
 </div>
 
 <script>
-/* ========== 主题（手动优先） ========== */
-(function(){try{
-  const pref = localStorage.getItem('mbti_theme');
-  setTheme(pref || 'light');
-}catch{ setTheme('light'); }})();
+/* ====== Notion/iframe 兼容层：存储/复制/下载/报错 ====== */
+const ENV = {
+  inIframe:(()=>{try{return window.top!==window}catch{return true}})(),
+  inNotion:(()=> (document.referrer||'').includes('notion.so'))()
+};
+ENV.isNotionEmbed = ENV.inIframe || ENV.inNotion;
 
+const MemoryStore=(()=>{const bag=Object.create(null);return{
+  getItem:k=>bag[k]??null,setItem:(k,v)=>bag[k]=String(v),removeItem:k=>delete bag[k]
+}})();
+const SafeStore=(()=>{try{const k='__probe__'+Date.now();localStorage.setItem(k,'1');localStorage.removeItem(k);return localStorage}catch{return MemoryStore}})();
+
+function toast(msg,ms=1800){
+  let t=document.getElementById('__toast__');
+  if(!t){t=document.createElement('div');t.id='__toast__';t.style.cssText=
+    'position:fixed;left:50%;top:18px;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:8px 12px;border-radius:10px;font:13px/1.3 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;z-index:2147483647;opacity:0;transition:opacity .15s;pointer-events:none;max-width:80vw;text-align:center';
+    document.body.appendChild(t)}
+  t.textContent=String(msg||'');t.style.opacity='1';clearTimeout(t.__timer);t.__timer=setTimeout(()=>t.style.opacity='0',ms);
+}
+async function safeCopy(text){
+  try{await navigator.clipboard.writeText(text);toast('已复制到剪贴板')}
+  catch{try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','readonly');ta.style.cssText='position:fixed;left:-9999px;top:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('已复制（兼容模式）')}catch{toast('复制失败：请手动全选复制')}}}
+function safeDownload(filename,content,mime='application/octet-stream'){
+  try{const blob=new Blob([content],{type:mime});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast('已触发下载')}
+  catch{const pre=document.querySelector('#md');if(pre){pre.textContent=String(content);toast('下载受限，已在下方显示内容')}}}
+window.addEventListener('error',e=>{if(ENV.isNotionEmbed)toast('脚本错误：'+(e?.message||'未知'))});
+
+/* ====== 主题 ====== */
 function setTheme(mode){
   document.body.classList.remove('theme-light','theme-dark');
   document.body.classList.add(mode==='dark'?'theme-dark':'theme-light');
-  try{ localStorage.setItem('mbti_theme', mode); }catch{}
-  const btn = document.getElementById('themeToggle');
-  if(btn) btn.textContent = '切换主题：' + (mode==='dark'?'夜晚':'白天');
+  SafeStore.setItem('mbti_theme', mode);
+  const btn=document.getElementById('themeToggle');
+  if(btn) btn.textContent='切换主题：'+(mode==='dark'?'夜晚':'白天');
 }
-document.getElementById('themeToggle').onclick = ()=> setTheme(
-  document.body.classList.contains('theme-light') ? 'dark' : 'light'
+(function(){setTheme(SafeStore.getItem('mbti_theme')||'light')})();
+document.getElementById('themeToggle').onclick=()=>setTheme(
+  document.body.classList.contains('theme-light')?'dark':'light'
 );
 
-/* ========== 数据 ========== */
+/* ====== 数据 ====== */
 const MBTI_STACKS={
   INTJ:["Ni","Te","Fi","Se"], INTP:["Ti","Ne","Si","Fe"], INFJ:["Ni","Fe","Ti","Se"], INFP:["Fi","Ne","Si","Te"],
   ISTJ:["Si","Te","Fi","Ne"], ISTP:["Ti","Se","Ni","Fe"], ISFJ:["Si","Fe","Ti","Ne"], ISFP:["Fi","Se","Ni","Te"],
@@ -246,7 +267,7 @@ const CATEGORY_RULES=[
 ];
 const DEFAULT_STACK_WEIGHTS={ dom:.40, aux:.30, ter:.20, inf:.10 };
 
-/* ========== 小工具 ========== */
+/* ====== 小工具 ====== */
 const $ = s => document.querySelector(s);
 const els = {
   type:$('#type'), phase:$('#phase'), goals:$('#goals'), task:$('#task'),
@@ -254,18 +275,19 @@ const els = {
   cats:$('#cats'), md:$('#md'), copyMd:$('#copyMd'), resetManual:$('#resetManual'),
   saveProfile:$('#saveProfile'), loadProfile:$('#loadProfile'), exportJSON:$('#exportJSON'),
   demoBtn:$('#demoBtn'), explainToggle:$('#explainToggle'),
-  oneLine:$('#oneLine'), nextActions:$('#nextActions'), taskQueue:$('#taskQueue')
+  oneLine:$('#oneLine'), nextActions:$('#nextActions'), taskQueue:$('#taskQueue'),
+  themeToggle:$('#themeToggle')
 };
 const state = {
   type:'INTJ', phase:'0_1', goals:['效率','可扩展'], task:'',
   manual:{Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0},
   showExplain:true
 };
-
 const clamp01=x=>Math.max(0,Math.min(1,x));
 const sum=o=>Object.values(o).reduce((a,b)=>a+b,0);
 const normalize=w=>{const s=sum(w)||1; const o={}; for(const k in w) o[k]=(w[k]||0)/s; return o;};
 
+/* ====== 主题色随类型 ====== */
 function applyGroupThemeByType(type){
   const pal = GROUP_PALETTE[GROUP_BY_TYPE[type]||'analysts'];
   document.documentElement.style.setProperty('--brand', pal.main);
@@ -274,21 +296,20 @@ function applyGroupThemeByType(type){
   document.documentElement.style.setProperty('--btn-bg', pal.main);
 }
 
-/* ========== 计算 ========== */
+/* ====== 权重计算 ====== */
 function fuseWeights(type, phase, goals, manual){
   const stack = MBTI_STACKS[type] || MBTI_STACKS.INTJ;
   const [dom,aux,ter,inf] = stack;
-  const wStack = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
+  const wStack={Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
   wStack[dom]+=DEFAULT_STACK_WEIGHTS.dom; wStack[aux]+=DEFAULT_STACK_WEIGHTS.aux;
   wStack[ter]+=DEFAULT_STACK_WEIGHTS.ter; wStack[inf]+=DEFAULT_STACK_WEIGHTS.inf;
   const wPhase = PHASE_WEIGHTS[phase]||{};
-  const wGoal = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
+  const wGoal={Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
   goals.forEach(g=>{const gw=GOAL_WEIGHTS[g]||{}; for(const [k,v] of Object.entries(gw)) wGoal[k]+=v||0;});
   const combined={Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
   for(const k in combined) combined[k]=clamp01((wStack[k]||0)+(wPhase[k]||0)+(wGoal[k]||0)+(manual[k]||0));
   return normalize(combined);
 }
-
 function scoreCategories(funcW){
   return CATEGORY_RULES.map(cat=>{
     let score=0; const contrib=[];
@@ -297,19 +318,15 @@ function scoreCategories(funcW){
   }).sort((a,b)=>b.score-a.score);
 }
 
-/* —— 任务解析与评分 —— */
+/* ====== 任务解析/打分 ====== */
 function parseTasks(raw){
   if(!raw) return [];
   let text = String(raw).replace(/\u00A0/g,' ').trim();
-  // 粗切：换行或中英文分隔符
   let parts = text.split(/\r?\n+|[;；。\.、，,]+/);
-  // 展开同一行多个事项（和/与/及/顿号/斜杠/竖线）
   parts = parts.flatMap(s=>s.split(/\s*(?:和|与|及|、|\s\/\s|\s\|\s)\s*/));
   return parts.map(s=>s.trim())
-    .map(s=>s.replace(/^(\d+[\.\)）:、-]|\([0-9]+\)|[①-⑳]|[一二三四五六七八九十]+、|[-•·])\s*/, '')) // 去编号/项目符号
-    .filter(Boolean)
-    .filter((t,i,a)=>a.indexOf(t)===i)
-    .map(text=>({text}));
+    .map(s=>s.replace(/^(\d+[\.\)）:、-]|\([0-9]+\)|[①-⑳]|[一二三四五六七八九十]+、|[-•·])\s*/, ''))
+    .filter(Boolean).filter((t,i,a)=>a.indexOf(t)===i).map(text=>({text}));
 }
 function pickUrgency(t){
   if(/今天|今晚|立刻|马上|尽快|DDL|截止|现在/.test(t)) return 1.0;
@@ -324,7 +341,7 @@ function relationBoost(t){
   return 0;
 }
 function pickImpact(t){
-  let b = 0.5;
+  let b=0.5;
   if(/汇报|复盘|面试|考试|交付|上线|合规|合同|签约|付款|收款/.test(t)) b=0.85;
   if(/渗水|漏水|维修|健康|体检|就医|过期/.test(t)) b=Math.max(b,0.75);
   if(/学习|阅读|整理|备份|归档/.test(t)) b=Math.max(b,0.55);
@@ -347,7 +364,7 @@ function matchCategoryForTask(t){
     {key:'experience', kw:/体验|交互|视觉|可用性|无障碍|加载|首屏|反馈/i, label:'体验提升'},
     {key:'analytics',  kw:/埋点|统计|报表|看板|指标|监控|日志|分析|数据/i, label:'指标化/观测'},
     {key:'docs',       kw:/文档|流程|SOP|规范|周报|月报|ADR|记录|整理|归档/i, label:'文档/流程'},
-    {key:'health',     kw:/体检|医院|就医|药|复查|睡眠|锻炼|健身|牙科/i, label:'健康'},
+    {key:'health',     kw:/体检|医院|就医|药|复查|睡眠|锻炼|牙科/i, label:'健康'},
     {key:'house',      kw:/渗水|漏水|维修|家电|保洁|搬家|物业|装修|换锁|快递/i, label:'居家/后勤'},
     {key:'relation',   kw:/伴侣|父母|爸妈|孩子|朋友|客户|老板|上级|导师|老师/i, label:'关系沟通'},
     {key:'study',      kw:/学习|阅读|刷题|考试|复习|课程|作业|论文|备考|练习/i, label:'学习/提升'},
@@ -366,7 +383,7 @@ function scoreTaskArray(tasks, topCat){
   }).sort((a,b)=> b.score - a.score);
 }
 
-/* ========== Markdown 导出 ========== */
+/* ====== Markdown ====== */
 function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,tasksSorted}){
   const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join('\n');
   const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')).join('\n\n');
@@ -395,7 +412,7 @@ ${cats}
 `;
 }
 
-/* ========== 初始化与渲染 ========== */
+/* ====== UI 渲染 ====== */
 function initSelectors(){
   els.type.innerHTML = Object.keys(MBTI_STACKS).map(t=>`<option value="${t}">${t}（${MBTI_STACKS[t].join('-')}）</option>`).join('');
   els.type.value = state.type;
@@ -426,106 +443,107 @@ function renderManual(){
   });
 }
 
+/* ====== 主渲染函数（全兜底） ====== */
 function computeAndRender(){
-  applyGroupThemeByType(state.type);
-  const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual);
-  const cats = scoreCategories(funcW);
-  const top = cats[0];
+  try{
+    applyGroupThemeByType(state.type);
 
-  /* 功能权重（带条形图 + 解释开关） */
-  const maxFW = Math.max(...Object.values(funcW), 0.0001);
-  els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
-    const d = FUNC_DESC[f]; const pct=(v*100).toFixed(1)+'%';
-    const detail = state.showExplain ? `<div class="sub">输入：${d.in}</div><div class="sub">评估：${d.eval}</div><div class="sub">输出：${d.out}</div>` : '';
-    return `<div class="item">
-      <div class="kv"><div><b>${f}</b></div><div class="sub">${pct}</div></div>
-      <div class="bar"><i style="width:${(v/maxFW*100).toFixed(1)}%"></i></div>
-      ${detail}
-    </div>`;
-  }).join('');
-  els.explainToggle.textContent = '解释：' + (state.showExplain?'开启':'关闭');
+    const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual) || {};
+    const cats  = scoreCategories(funcW) || [];
+    const top   = cats[0] || null;
 
-  /* 阶段/目标影响 */
-  els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
+    const maxFW = Math.max(0.0001, ...Object.values(funcW));
+    els.weights.innerHTML = Object.entries(funcW)
+      .sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
+        const d = FUNC_DESC[f] || {in:'—',eval:'—',out:'—'};
+        const detail = state.showExplain
+          ? `<div class="sub">输入：${d.in}</div><div class="sub">评估：${d.eval}</div><div class="sub">输出：${d.out}</div>` : '';
+        return `<div class="item">
+          <div class="kv"><div><b>${f}</b></div><div class="sub">${(v*100).toFixed(1)}%</div></div>
+          <div class="bar"><i style="width:${(v/maxFW*100).toFixed(1)}%"></i></div>${detail}
+        </div>`;
+      }).join('') || `<div class="sub">（暂无权重数据）</div>`;
+    if(els.explainToggle) els.explainToggle.textContent = '解释：' + (state.showExplain?'开启':'关闭');
 
-  /* 建议优先级（Top 6） */
-  const maxCat = Math.max(1, ...cats.map(c=>c.score));
-  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class="item">
-    <div class="kv"><div><b>${c.title}</b></div><div class="sub">${c.score}</div></div>
-    <div class="sub">${c.brief}</div>
-    <div class="bar"><i style="width:${(c.score/maxCat*100).toFixed(1)}%"></i></div>
-    <div class="sub">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div>
-  </div>`).join('');
+    if(els.phaseGoalDesc){
+      els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}`;
+    }
 
-  const summaryMap={
-    '快速 MVP/可用版本':'先做能跑起来的版本，灰度上线并预留回退。',
-    '内核重构/技术债偿还':'优先修内核与债务，保证稳定与可维护性。',
-    '增长实验/新路径':'先开实验槽位，跑两条主假设，择优放大。',
-    '合规与风控':'把合规与审计补齐，再考虑扩张与推广。',
-    '体验与感知提升':'把可感知收益前置到 3 步内，反馈要即刻可见。',
-    '指标化与可观测性':'先把关键指标与埋点打通，决策要可量化。',
-    '文档/流程与协作':'把决策留痕与流程标准化，确保可复盘。'
-  };
-  els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief) : '';
-  const actionsMap={
-    '快速 MVP/可用版本':['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'],
-    '内核重构/技术债偿还':['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'],
-    '增长实验/新路径':['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'],
-    '合规与风控':['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'],
-    '体验与感知提升':['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'],
-    '指标化与可观测性':['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'],
-    '文档/流程与协作':['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏']
-  };
-  els.nextActions.innerHTML = (top?actionsMap[top.title]||[]:[]).slice(0,3).map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('');
+    const summaryMap={
+      '快速 MVP/可用版本':'先做能跑起来的版本，灰度上线并预留回退。',
+      '内核重构/技术债偿还':'优先修内核与债务，保证稳定与可维护性。',
+      '增长实验/新路径':'先开实验槽位，跑两条主假设，择优放大。',
+      '合规与风控':'把合规与审计补齐，再考虑扩张与推广。',
+      '体验与感知提升':'把可感知收益前置到 3 步内，反馈要即刻可见。',
+      '指标化与可观测性':'先把关键指标与埋点打通，决策要可量化。',
+      '文档/流程与协作':'把决策留痕与流程标准化，确保可复盘。'
+    };
+    if(els.oneLine) els.oneLine.textContent = top ? (summaryMap[top.title] || top.brief || '') : '（请先填写上方参数与任务）';
 
-  /* 任务优先队列（根据内容自动排序） */
-  const tasks = parseTasks(state.task);
-  const tasksSorted = scoreTaskArray(tasks, top);
-  const tq = tasksSorted.length ? tasksSorted : [];
-  const maxScore = Math.max(1, ...tq.map(t=>t.score));
-  els.taskQueue.innerHTML = tq.slice(0,10).map(t=>`
-    <div class="item">
-      <div class="kv"><div>${t.text}</div><div class="sub">${t.score.toFixed(1)}</div></div>
-      <div class="bar"><i style="width:${(t.score/maxScore*100).toFixed(1)}%"></i></div>
-      <div class="sub">紧急:${(t.u*100).toFixed(0)}% ｜ 影响:${(t.i*100).toFixed(0)}% ｜ 努力:${t.e.toFixed(1)} ｜ 匹配:${t.matchLabel}</div>
-    </div>
-  `).join('') || `<div class="sub">（未检测到可排序的任务，每行一条）</div>`;
+    const actionsMap={
+      '快速 MVP/可用版本':['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'],
+      '内核重构/技术债偿还':['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'],
+      '增长实验/新路径':['写出两条核心假设与指标','设计低成本实验与退出条件','设置 2 周复盘会'],
+      '合规与风控':['梳理数据与权限矩阵','开启审计日志','完成合规清单自查'],
+      '体验与感知提升':['压缩首屏关键路径','加入即时反馈/提示','用户访谈 5 人验证感知'],
+      '指标化与可观测性':['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'],
+      '文档/流程与协作':['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏']
+    };
+    if(els.nextActions){
+      const acts = top ? (actionsMap[top.title] || []) : [];
+      els.nextActions.innerHTML = acts.slice(0,3).map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('')
+        || `<div class="sub">（暂无建议动作）</div>`;
+    }
 
-  /* 导出 Markdown */
-  els.md.textContent = toMarkdown({
-    type:state.type, phase:state.phase, goals:state.goals,
-    funcWeights:funcW, categories:cats, task:state.task,
-    showExplain:state.showExplain, tasksSorted
-  });
+    const tasks = parseTasks(state.task || '');
+    const tasksSorted = scoreTaskArray(tasks, top);
+    if(els.taskQueue){
+      const maxScore = Math.max(1, ...tasksSorted.map(t=>t.score||0));
+      els.taskQueue.innerHTML = tasksSorted.slice(0,10).map(t=>`
+        <div class="item">
+          <div class="kv"><div>${t.text}</div><div class="sub">${(t.score||0).toFixed(1)}</div></div>
+          <div class="bar"><i style="width:${(t.score/maxScore*100).toFixed(1)}%"></i></div>
+          <div class="sub">紧急:${((t.u||0)*100).toFixed(0)}% ｜ 影响:${((t.i||0)*100).toFixed(0)}% ｜ 努力:${(t.e||1).toFixed(1)} ｜ 匹配:${t.matchLabel||'—'}</div>
+        </div>
+      `).join('') || `<div class="sub">（未检测到可排序的任务，每行一条）</div>`;
+    }
+
+    if(els.md){
+      els.md.textContent = toMarkdown({
+        type:state.type, phase:state.phase, goals:state.goals,
+        funcWeights:funcW, categories:cats, task:state.task,
+        showExplain:state.showExplain, tasksSorted
+      });
+    }
+  }catch(err){ toast('渲染异常：'+(err?.message||err)); }
 }
 
-/* ========== 事件绑定 ========== */
+/* ====== 事件 ====== */
 function bindEvents(){
   els.type.onchange = ()=>{ state.type=els.type.value; computeAndRender(); };
   els.phase.onchange= ()=>{ state.phase=els.phase.value; computeAndRender(); };
   els.task.oninput  = ()=>{ state.task=els.task.value; computeAndRender(); };
   els.resetManual.onclick = ()=>{ state.manual={Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}; renderManual(); computeAndRender(); };
-  els.saveProfile.onclick = ()=>{ try{ localStorage.setItem('mbti_decider_profile_offline', JSON.stringify(state)); alert('已保存到本地浏览器'); }catch{ alert('保存失败：环境不支持 localStorage'); } };
-  els.loadProfile.onclick = ()=>{ try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(!raw) return; Object.assign(state, JSON.parse(raw)); els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task||''; renderGoals(); renderManual(); computeAndRender(); }catch{} };
-  els.exportJSON.onclick = ()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`mbti_decider_profile_${state.type}.json`; a.click(); URL.revokeObjectURL(url); };
+  els.saveProfile.onclick = ()=>{ try{ SafeStore.setItem('mbti_decider_profile_offline', JSON.stringify(state)); toast('已保存到本地'); }catch{ toast('保存失败：环境限制'); } };
+  els.loadProfile.onclick = ()=>{ try{ const raw=SafeStore.getItem('mbti_decider_profile_offline'); if(!raw){ toast('没有找到本地配置'); return; } Object.assign(state, JSON.parse(raw)); els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task||''; renderGoals(); renderManual(); computeAndRender(); toast('已读取配置'); }catch{ toast('读取失败：数据格式异常'); } };
+  els.exportJSON.onclick = ()=>{ const json=JSON.stringify(state,null,2); safeDownload(`mbti_decider_profile_${state.type}.json`, json, 'application/json'); };
   els.demoBtn.onclick = ()=>{ state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展']; state.task=`给父母体检预约（周六）
 厨房水槽渗水（影响做饭）
 下周一周会汇报（PPT）
 恢复每周两次力量训练
 跟伴侣沟通上周争吵`; state.manual={Ni:0.05,Ne:0,Si:0.05,Se:0,Fi:0,Fe:0,Ti:0.10,Te:0.20}; els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task; renderGoals(); renderManual(); computeAndRender(); };
-  els.copyMd.onclick = async()=>{ try{ await navigator.clipboard.writeText(els.md.textContent); alert('Markdown 已复制'); }catch{ alert('复制失败，可手动全选复制'); } };
+  els.copyMd.onclick = ()=> safeCopy(els.md.textContent || '');
   els.explainToggle.onclick = ()=>{ state.showExplain=!state.showExplain; computeAndRender(); };
 }
 
-/* ========== 启动 ========== */
+/* ====== 启动 ====== */
 (function(){
-  try{ const raw=localStorage.getItem('mbti_decider_profile_offline'); if(raw) Object.assign(state, JSON.parse(raw)); }catch{}
-  // 初始化下拉与滑条
+  try{ const raw=SafeStore.getItem('mbti_decider_profile_offline'); if(raw) Object.assign(state, JSON.parse(raw)); }catch{}
   initSelectors(); bindEvents(); els.task.value=state.task||'';
-  // 色系与首次渲染
   applyGroupThemeByType(state.type); computeAndRender();
+  const isLight=document.body.classList.contains('theme-light');
+  if(els.themeToggle) els.themeToggle.textContent='切换主题：'+(isLight?'白天':'夜晚');
 })();
 </script>
 </body>
 </html>
-
