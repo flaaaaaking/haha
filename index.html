@@ -3,17 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MBTI 决策工具 v1.2（含语言检测）</title>
+<title>MBTI 决策工具 v1.3（语言+关键词+情绪+排序+导出）</title>
 <style>
-  /* ===== 基础与主题（明/暗 + 自动/手动） ===== */
   :root{
-    /* 暗色默认 */
     --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34;
     --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16;
     --brand:#7E57C2; --brand-acc:#9575CD; --brand-hi:#B39DDB; --btn-bg:var(--brand);
   }
   @media (prefers-color-scheme: light){
-    :root{ --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db; --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa; }
+    :root{ --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db;
+           --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa; }
   }
   body.theme-light{ --bg:#f7f9fb; --panel:#ffffff; --text:#111827; --muted:#6b7280; --line:#d1d5db; --chip:#f3f4f6; --chipbd:#e5e7eb; --input:#f3f4f6; --inputbd:#e5e7eb; --code:#f5f7fa; }
   body.theme-dark { --bg:#0f1115; --panel:#151922; --text:#e8ecf2; --muted:#9aa3b2; --line:#242a34; --chip:#1b2029; --chipbd:#2a3140; --input:#0e131a; --inputbd:#334155; --code:#0a0f16; }
@@ -57,8 +56,8 @@
   <div class="wrap">
     <div class="header">
       <div>
-        <h1>MBTI 决策工具 v1.2（含语言检测）</h1>
-        <p class="muted">纯本地运行，免服务器。数据仅存于浏览器 <code>localStorage</code>。</p>
+        <h1>MBTI 决策工具 v1.3（语言/关键词/情绪/排序/导出）</h1>
+        <p class="muted">纯前端 · 免服务器 · 数据仅存于浏览器 <code>localStorage</code>。</p>
       </div>
       <div class="btns">
         <button class="btn" id="themeToggle">切换主题：夜晚</button>
@@ -119,14 +118,21 @@
 
       <!-- 右：结果与导出 -->
       <section class="card">
-        <h2>建议优先级（Top 6）</h2>
+        <h2>建议与导出</h2>
         <div class="card" style="margin:12px 0">
           <h2>一行话结论</h2>
           <p class="muted" id="oneLine"></p>
           <h2>下一步动作（最多 3 条）</h2>
           <div id="nextActions" class="list"></div>
         </div>
-        <div id="cats" class="list"></div>
+        <div class="card" style="margin:12px 0">
+          <h2>任务优先队列（高→低）</h2>
+          <div id="taskQueue" class="list"></div>
+        </div>
+        <div class="card" style="margin:12px 0">
+          <h2>建议优先级（Top 6）</h2>
+          <div id="cats" class="list"></div>
+        </div>
         <div class="card" style="margin-top:12px">
           <h2>导出</h2>
           <div class="btns"><button class="btn primary" id="copyMd">复制 Markdown</button></div>
@@ -139,7 +145,7 @@
   </div>
 
 <script>
-/* ================== 主题初始化与切换 ================== */
+/* ================== 主题 ================== */
 (function initTheme(){
   const pref = safeGet('mbti_theme');
   const sysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -161,7 +167,7 @@ try{
   });
 }catch{}
 
-/* ================== 数据定义 ================== */
+/* ================== 数据 ================== */
 const MBTI_STACKS = {
   INTJ:["Ni","Te","Fi","Se"], INTP:["Ti","Ne","Si","Fe"], INFJ:["Ni","Fe","Ti","Se"], INFP:["Fi","Ne","Si","Te"],
   ISTJ:["Si","Te","Fi","Ne"], ISTP:["Ti","Se","Ni","Fe"], ISFJ:["Si","Fe","Ti","Ne"], ISFP:["Fi","Se","Ni","Te"],
@@ -205,41 +211,15 @@ const CATEGORY_RULES = [
   { key:"docs", title:"文档/流程与协作", contribute:{ Fe:.25, Si:.25, Te:.15, Ti:.10 }, brief:"决策可追溯，可复盘。" },
 ];
 const DEFAULT_STACK_WEIGHTS = { dom:.40, aux:.30, ter:.20, inf:.10 };
+
 const clamp01 = x => Math.max(0, Math.min(1, x));
 const sum = obj => Object.values(obj).reduce((a,b)=>a+b,0);
 function normalize(w){const s=sum(w)||1;const o={};Object.keys(w).forEach(k=>o[k]=w[k]/s);return o}
 
-function fuseWeights(type, phase, goals, manual){
-  const stack = MBTI_STACKS[type] || MBTI_STACKS["INTJ"];
-  const [dom,aux,ter,inf] = stack;
-  const wStack = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  wStack[dom]+=DEFAULT_STACK_WEIGHTS.dom; wStack[aux]+=DEFAULT_STACK_WEIGHTS.aux;
-  wStack[ter]+=DEFAULT_STACK_WEIGHTS.ter; wStack[inf]+=DEFAULT_STACK_WEIGHTS.inf;
-  const wPhase = PHASE_WEIGHTS[phase] || {};
-  const wGoal = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  goals.forEach(g=>{const gw=GOAL_WEIGHTS[g]||{};Object.entries(gw).forEach(([k,v])=>wGoal[k]+=v||0)});
-  const combined = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
-  Object.keys(combined).forEach(k=>{ const base=(wStack[k]||0)+(wPhase[k]||0)+(wGoal[k]||0); const boost=(manual[k]||0); combined[k]=clamp01(base+boost); });
-  return normalize(combined);
-}
-function scoreCategories(funcW){
-  return CATEGORY_RULES.map(cat=>{
-    let score=0; const contrib=[];
-    Object.entries(cat.contribute).forEach(([f,w])=>{const s=(funcW[f]||0)*(w||0); if(s>0) contrib.push([f,s]); score+=s;});
-    return {...cat, score:+(score*100).toFixed(1), contrib:contrib.sort((a,b)=>b[1]-a[1])}
-  }).sort((a,b)=>b.score-a.score);
-}
-function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,langInfo}){
-  const fw = Object.entries(funcWeights).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join("\n");
-  const cats = categories.slice(0,6).map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(" · ")).join("\n\n");
-  const expNote = showExplain?"（含解释）":"（简洁版）";
-  const langNote = langInfo && langInfo.lang ? `语言：${langInfo.lang}（可信度 ${(langInfo.confidence*100).toFixed(0)}%）` : "语言：未识别";
-  return `# 决策报告 ${expNote}\n\n**类型**：${type}    **阶段**：${phase.replace("0_1","0→1")}    **目标**：${goals.join(" / ")||"未选"}    **${langNote}**\n\n**任务**：\n${(task||'').trim()||"（未填写）"}\n\n---\n\n## 功能权重\n${fw}\n\n---\n\n## 建议优先级（Top 6）\n${cats}\n`;
-}
-
-/* ====== 语言检测（Dandelion）====== */
-const DANDELION_TOKEN = 'demo';   // ← 若有自己的 token，替换此处
+/* ================== API 封装（含兜底/缓存） ================== */
+const DANDELION_TOKEN = 'demo'; // ← 有自己的 token 就换掉
 const langCache = new Map();
+
 async function detectLang(text, { token = DANDELION_TOKEN, timeoutMs = 6000 } = {}){
   const key = (text||'').trim().slice(0,800);
   if(!key) return { lang:null, confidence:0, source:'empty' };
@@ -260,7 +240,6 @@ async function detectLang(text, { token = DANDELION_TOKEN, timeoutMs = 6000 } = 
     return info;
   }catch(e){
     clearTimeout(to);
-    // 本地兜底：粗略统计中英字符占比
     const zhRatio = (key.match(/[\u4e00-\u9fa5]/g)||[]).length / Math.max(1,key.length);
     const enRatio = (key.match(/[A-Za-z]/g)||[]).length / Math.max(1,key.length);
     const lang = zhRatio>0.2 ? 'zh' : (enRatio>0.2 ? 'en' : null);
@@ -268,6 +247,152 @@ async function detectLang(text, { token = DANDELION_TOKEN, timeoutMs = 6000 } = 
     langCache.set(key, info);
     return info;
   }
+}
+
+async function extractKeywords(text, { token = DANDELION_TOKEN, timeoutMs = 6000 } = {}) {
+  const ctrl = new AbortController(); const to = setTimeout(()=>ctrl.abort(), timeoutMs);
+  try{
+    const url = 'https://api.dandelion.eu/datatxt/nex/v1/?lang=auto&min_confidence=0.5';
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({ text, token }),
+      signal: ctrl.signal
+    });
+    clearTimeout(to);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    return (data.annotations||[]).map(a=>({ spot:a.spot, title:a.title, conf:+a.confidence||0 }));
+  }catch(e){
+    clearTimeout(to);
+    return [];
+  }
+}
+
+async function detectSentiment(text, { token = DANDELION_TOKEN, timeoutMs = 6000 } = {}) {
+  const ctrl = new AbortController(); const to = setTimeout(()=>ctrl.abort(), timeoutMs);
+  try{
+    const url = 'https://api.dandelion.eu/datatxt/sent/v1/?lang=auto';
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({ text, token }),
+      signal: ctrl.signal
+    });
+    clearTimeout(to);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const s = data.sentiment || {};
+    return { type: s.type || 'neutral', score: +s.score || 0 };
+  }catch(e){
+    clearTimeout(to);
+    return { type:'neutral', score:0 };
+  }
+}
+
+/* ================== 融合逻辑 ================== */
+function fuseWeights(type, phase, goals, manual){
+  const stack = MBTI_STACKS[type] || MBTI_STACKS["INTJ"];
+  const [dom,aux,ter,inf] = stack;
+  const wStack = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
+  wStack[dom]+=DEFAULT_STACK_WEIGHTS.dom; wStack[aux]+=DEFAULT_STACK_WEIGHTS.aux;
+  wStack[ter]+=DEFAULT_STACK_WEIGHTS.ter; wStack[inf]+=DEFAULT_STACK_WEIGHTS.inf;
+  const wPhase = PHASE_WEIGHTS[phase] || {};
+  const wGoal = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
+  goals.forEach(g=>{const gw=GOAL_WEIGHTS[g]||{};Object.entries(gw).forEach(([k,v])=>wGoal[k]+=v||0)});
+  const combined = {Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0};
+  Object.keys(combined).forEach(k=>{ const base=(wStack[k]||0)+(wPhase[k]||0)+(wGoal[k]||0); const boost=(manual[k]||0); combined[k]=clamp01(base+boost); });
+  return normalize(combined);
+}
+function scoreCategories(funcW){
+  return CATEGORY_RULES.map(cat=>{
+    let score=0; const contrib=[];
+    Object.entries(cat.contribute).forEach(([f,w])=>{const s=(funcW[f]||0)*(w||0); if(s>0) contrib.push([f,s]); score+=s;});
+    return {...cat, score:+(score*100).toFixed(1), contrib:contrib.sort((a,b)=>b[1]-a[1])}
+  }).sort((a,b)=>b.score-a.score);
+}
+
+/* ===== 任务优先队列（本地 + 情绪加权） ===== */
+function rankTasks(rawText, detectedLang){
+  const lines = (rawText || "")
+    .split(/\r?\n/)
+    .map(s => s.trim()).filter(Boolean);
+
+  const kw = {
+    urgent: ['今天','今晚','立刻','马上','尽快','现在','立即','紧急','ddl','截止','周一','明天','本周','周末'],
+    health: ['医院','体检','生病','头疼','发烧','药','复诊','手术','挂号','检查'],
+    people: ['父母','客户','老板','同事','伴侣','孩子','老师','供应商'],
+    infra:  ['漏水','维修','报修','网络','账单','电费','水费','房东','租金'],
+  };
+
+  const scored = lines.map((t, idx) => {
+    let score = 10 - Math.abs(t.length - 12) * 0.5;
+    if (kw.urgent.some(k => t.includes(k))) score += 6;
+    if (kw.health.some(k => t.includes(k))) score += 6;
+    if (kw.people.some(k => t.includes(k))) score += 3;
+    if (kw.infra.some(k => t.includes(k))) score += 3;
+    if (/吃饭|吃早饭|吃午饭|吃晚饭|用餐/.test(t)) score += 2;
+    if (/拉屎|上厕所|如厕/.test(t)) score += 2;
+    if (detectedLang && detectedLang.lang === 'zh') score += 0.5;
+    return { idx, text: t, score: +(score.toFixed(1)) };
+  });
+
+  scored.sort((a,b)=> b.score - a.score || a.idx - b.idx);
+  return scored;
+}
+
+async function enrichScoresWithSentiment(scored){
+  if(!scored || !scored.length) return scored;
+  const joined = scored.map(x=>x.text).join('。');
+  const sent = await detectSentiment(joined).catch(()=>({type:'neutral',score:0}));
+  const bias = (sent.type==='negative' ? 1.5 : sent.type==='positive' ? -0.5 : 0);
+  scored.forEach(s => s.score = +(s.score + bias).toFixed(1));
+  scored.sort((a,b)=> b.score - a.score || a.idx - b.idx);
+  return scored;
+}
+
+/* ===== 导出 Markdown ===== */
+function toMarkdown({type,phase,goals,funcWeights,categories,task,showExplain,langInfo,oneLine,nextActions,rankedTasks,keywords}){
+  const fw = Object.entries(funcWeights)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`- ${k}: ${(v*100).toFixed(1)}%`).join("\n");
+
+  const cats = categories.slice(0,6)
+    .map(c=>`### ${c.title}｜${c.score}\n> ${c.brief}\n来源：`+
+      c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(" · "))
+    .join("\n\n");
+
+  const expNote = showExplain ? "（含解释）" : "（简洁版）";
+  const langNote = langInfo && langInfo.lang
+      ? `语言：${langInfo.lang}（可信度 ${(langInfo.confidence*100).toFixed(0)}%）`
+      : "语言：未识别";
+  const kwText = (keywords||[]).slice(0,8).map(k=>k.spot).join('、');
+
+  const oneLineBlock = oneLine ? `\n## 一句话结论\n${oneLine}\n` : "";
+  const nextBlock = (nextActions && nextActions.length)
+      ? `\n## 下一步动作（最多 3 条）\n` + nextActions.map((t,i)=>`${i+1}. ${t}`).join("\n") + "\n"
+      : "";
+  const rankedBlock = (rankedTasks && rankedTasks.length)
+      ? `\n## 任务优先队列（高→低）\n` +
+        rankedTasks.map((r,i)=>`${i+1}. ${r.text}  ——  分数：${r.score}`).join("\n") + "\n"
+      : "";
+
+  return `# 决策报告 ${expNote}
+
+**类型**：${type}    **阶段**：${phase.replace("0_1","0→1")}    **目标**：${goals.join(" / ")||"未选"}    **${langNote}**${kwText?`    **关键词**：${kwText}`:""}
+
+**任务**：
+${(task||'').trim()||"（未填写）"}
+
+---
+
+## 功能权重
+${fw}
+${oneLineBlock}${nextBlock}
+
+## 建议优先级（Top 6）
+${cats}
+${rankedBlock}`;
 }
 
 /* ================== UI/状态 ================== */
@@ -278,9 +403,14 @@ const els = {
   cats: $('#cats'), md: $('#md'), copyMd: $('#copyMd'),
   resetManual: $('#resetManual'), saveProfile: $('#saveProfile'), loadProfile: $('#loadProfile'), exportJSON: $('#exportJSON'),
   demoBtn: $('#demoBtn'), explainToggle: $('#explainToggle'),
-  oneLine: $('#oneLine'), nextActions: $('#nextActions'), themeToggle: $('#themeToggle')
+  oneLine: $('#oneLine'), nextActions: $('#nextActions'), themeToggle: $('#themeToggle'),
+  taskQueue: $('#taskQueue')
 };
-const state = { type:'INTJ', phase:'0_1', goals:['效率','可扩展'], task:'', manual:{Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0}, showExplain:false, detectedLang:null };
+const state = {
+  type:'INTP', phase:'0_1', goals:['效率','稳健'], task:'',
+  manual:{Ni:0,Ne:0,Si:0,Se:0,Fi:0,Fe:0,Ti:0,Te:0},
+  showExplain:false, detectedLang:null, keywords:[], rankedTasks:[], oneLine:'', nextActions:[]
+};
 
 function initSelectors(){
   els.type.innerHTML = Object.keys(MBTI_STACKS).map(t=>`<option value="${t}">${t}（${MBTI_STACKS[t].join('-')}）</option>`).join('');
@@ -293,7 +423,6 @@ function renderGoals(){
   list.forEach(g=>{ const btn=document.createElement('div'); btn.className='chip'+(state.goals.includes(g)?' on':''); btn.textContent=g; btn.onclick=()=>{toggleGoal(g)}; els.goals.appendChild(btn); });
 }
 function toggleGoal(g){ const i=state.goals.indexOf(g); if(i>=0) state.goals.splice(i,1); else state.goals.push(g); renderGoals(); computeAndRender(); }
-
 function renderManual(){
   els.manual.innerHTML=''; Object.keys(FUNC_DESC).forEach(f=>{
     const row=document.createElement('div'); row.className='row';
@@ -313,27 +442,34 @@ function applyGroupThemeByType(type){
   document.documentElement.style.setProperty('--btn-bg', pal.main);
 }
 
+/* ===== 主渲染 ===== */
 function computeAndRender(){
   applyGroupThemeByType(state.type);
   const funcW = fuseWeights(state.type, state.phase, state.goals, state.manual);
+
   // 权重
   els.weights.innerHTML = Object.entries(funcW).sort((a,b)=>b[1]-a[1]).map(([f,v])=>{
     const d=FUNC_DESC[f]; const detail = state.showExplain ? `<div class="sub">输入：${d.in}</div><div class="sub">评估：${d.eval}</div><div class="sub">输出：${d.out}</div>`:'';
     return `<div class="item"><div class="kv"><div><b>${f}</b></div><div class="sub">${(v*100).toFixed(1)}%</div></div>${detail}</div>`;
   }).join('');
-  // 阶段/目标 + 语言识别显示
+
+  // 阶段/目标 + 语言/关键词
   const langText = state.detectedLang && state.detectedLang.lang ? `｜语言：${state.detectedLang.lang}（可信度 ${(state.detectedLang.confidence*100).toFixed(0)}%）` : '';
-  els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}${langText}`;
+  const kwText = (state.keywords||[]).slice(0,6).map(k=>k.spot).join('、');
+  els.phaseGoalDesc.textContent = `当前阶段：${state.phase==='0_1'?'0→1':state.phase}；目标：${state.goals.join(' / ')||'未选'}${langText}${kwText?`｜关键词：${kwText}`:''}`;
+
   // 类别与动作
   const cats = scoreCategories(funcW);
-  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class="item"><div class="kv"><div><b>${c.title}</b></div><div class="sub">${c.score}</div></div><div class="sub">${c.brief}</div><div class="sub">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div></div>`).join('');
   const summaryMap = {
     '快速 MVP/可用版本':'先做能跑起来的版本，灰度上线并预留回退。','内核重构/技术债偿还':'优先修内核与债务，保证稳定与可维护性。',
     '增长实验/新路径':'先开实验槽位，跑两条主假设，择优放大。','合规与风控':'把合规与审计补齐，再考虑扩张与推广。',
     '体验与感知提升':'把可感知收益前置到 3 步内，反馈要即刻可见。','指标化与可观测性':'先把关键指标与埋点打通，决策要可量化。',
     '文档/流程与协作':'把决策留痕与流程标准化，确保可复盘。'
   };
-  const top = cats[0]; els.oneLine.textContent = top ? (summaryMap[top.title]||top.brief) : '';
+  els.cats.innerHTML = cats.slice(0,6).map(c=>`<div class="item"><div class="kv"><div><b>${c.title}</b></div><div class="sub">${c.score}</div></div><div class="sub">${c.brief}</div><div class="sub">来源：${c.contrib.map(([f,s])=>`${f} ${(s*100).toFixed(1)}%`).join(' · ')}</div></div>`).join('');
+
+  const top = cats[0];
+  els.oneLine.textContent = top ? (summaryMap[top.title]||top.brief) : '';
   const actionsMap = {
     '快速 MVP/可用版本':['列出最小闭环用户路径','灰度 3 批次，每批 10~20% 用户','定义回退与成功判据'],
     '内核重构/技术债偿还':['标注高复杂度模块并排期重构','补齐单元与集成测试','冻结新增特性直至质量达标'],
@@ -343,23 +479,54 @@ function computeAndRender(){
     '指标化与可观测性':['定义北极星与 3 个过程指标','补埋点→校验数据链路','搭建周报模板'],
     '文档/流程与协作':['补齐 ADR/变更记录','定义 DoR/DoD','建立每周同步节奏']
   };
-  els.nextActions.innerHTML = (top ? actionsMap[top.title]||[] : []).slice(0,3).map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('');
-  // Markdown
-  els.md.textContent = toMarkdown({ type:state.type, phase:state.phase, goals:state.goals, funcWeights:funcW, categories:cats, task:state.task, showExplain: state.showExplain, langInfo: state.detectedLang });
+  const acts = top ? (actionsMap[top.title] || []).slice(0,3) : [];
+  els.nextActions.innerHTML = acts.map(a=>`<div class="item"><div class="sub">${a}</div></div>`).join('');
+  state.oneLine = els.oneLine.textContent;
+  state.nextActions = acts;
+
+  // 任务优先队列（已含基础本地分）
+  state.rankedTasks = rankTasks(state.task, state.detectedLang);
+  // 渲染队列
+  els.taskQueue.innerHTML = state.rankedTasks.map(r=>`<div class="item"><div class="kv"><div>${r.text}</div><div class="sub">分数 ${r.score}</div></div></div>`).join('');
+
+  // 导出（先不加情绪加权，确保随输随导）
+  els.md.textContent = toMarkdown({
+    type:state.type, phase:state.phase, goals:state.goals, funcWeights:funcW, categories:cats, task:state.task,
+    showExplain: state.showExplain, langInfo: state.detectedLang, oneLine: state.oneLine, nextActions: state.nextActions,
+    rankedTasks: state.rankedTasks, keywords: state.keywords
+  });
 }
 
-/* ========= 事件绑定 ========= */
+/* ========= 事件 ========= */
 function bindEvents(){
   els.type.onchange= ()=>{ state.type=els.type.value; computeAndRender(); };
   els.phase.onchange=()=>{ state.phase=els.phase.value; computeAndRender(); };
-  // 任务输入：防抖 + 语言检测
+
   const debounce = (fn,ms)=>{let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),ms)}}
   els.task.oninput = debounce(async ()=>{
     state.task = els.task.value;
-    computeAndRender(); // 先刷新一次
+    computeAndRender(); // 先刷新
+    // 语言
     const info = await detectLang(state.task);
     state.detectedLang = info;
-    computeAndRender(); // 检测完成后再刷新
+    computeAndRender();
+    // 关键词（不阻塞）
+    extractKeywords(state.task).then(list=>{
+      state.keywords = list;
+      computeAndRender();
+    });
+    // 情绪（不阻塞）：加权后刷新队列与导出
+    enrichScoresWithSentiment(state.rankedTasks).then(newList=>{
+      state.rankedTasks = newList;
+      els.taskQueue.innerHTML = state.rankedTasks.map(r=>`<div class="item"><div class="kv"><div>${r.text}</div><div class="sub">分数 ${r.score}</div></div></div>`).join('');
+      // 重新生成导出
+      els.md.textContent = toMarkdown({
+        type:state.type, phase:state.phase, goals:state.goals, funcWeights:fuseWeights(state.type, state.phase, state.goals, state.manual),
+        categories:scoreCategories(fuseWeights(state.type, state.phase, state.goals, state.manual)),
+        task:state.task, showExplain: state.showExplain, langInfo: state.detectedLang,
+        oneLine: state.oneLine, nextActions: state.nextActions, rankedTasks: state.rankedTasks, keywords: state.keywords
+      });
+    });
   }, 400);
 
   els.copyMd.onclick = async ()=>{ try{await navigator.clipboard.writeText(els.md.textContent); alert('Markdown 已复制');}catch{} };
@@ -373,17 +540,28 @@ function bindEvents(){
 }
 
 function applyDemo(){
-  state.type='INTJ'; state.phase='0_1'; state.goals=['效率','可扩展'];
-  state.task=`给父母体检预约（周六）
-厨房水槽渗水（影响做饭）
-下周一周会汇报（做PPT）
-恢复每周两次力量训练
-跟伴侣沟通上周争吵`;
+  state.type='INTP'; state.phase='0_1'; state.goals=['效率','稳健'];
+  state.task=`吃饭
+拉屎
+打游戏
+去医院`;
   state.manual={Ni:0.05, Ne:0.00, Si:0.05, Se:0.00, Fi:0.00, Fe:0.00, Ti:0.10, Te:0.20};
   els.type.value=state.type; els.phase.value=state.phase; els.task.value=state.task;
   renderGoals(); renderManual(); computeAndRender();
-  // 顺带做一次语言检测
+  // 补API
   detectLang(state.task).then(info=>{state.detectedLang=info; computeAndRender();});
+  extractKeywords(state.task).then(list=>{state.keywords=list; computeAndRender();});
+  enrichScoresWithSentiment(rankTasks(state.task)).then(newList=>{
+    state.rankedTasks = newList;
+    els.taskQueue.innerHTML = state.rankedTasks.map(r=>`<div class="item"><div class="kv"><div>${r.text}</div><div class="sub">分数 ${r.score}</div></div></div>`).join('');
+    els.md.textContent = toMarkdown({
+      type:state.type, phase:state.phase, goals:state.goals,
+      funcWeights:fuseWeights(state.type, state.phase, state.goals, state.manual),
+      categories:scoreCategories(fuseWeights(state.type, state.phase, state.goals, state.manual)),
+      task:state.task, showExplain: state.showExplain, langInfo: state.detectedLang,
+      oneLine: state.oneLine, nextActions: state.nextActions, rankedTasks: state.rankedTasks, keywords: state.keywords
+    });
+  });
 }
 
 /* ========= 初始化 ========= */
@@ -394,9 +572,15 @@ function applyDemo(){
   bindEvents();
   const isLight = document.body.classList.contains('theme-light'); els.themeToggle.textContent = '切换主题：' + (isLight?'白天':'夜晚');
   applyGroupThemeByType(state.type);
-  // 首次渲染 + 首次语言识别（若有文本）
   computeAndRender();
-  if(state.task) detectLang(state.task).then(info=>{state.detectedLang=info; computeAndRender();});
+  // 初次若有文本，跑一次 API
+  if(state.task){
+    detectLang(state.task).then(info=>{state.detectedLang=info; computeAndRender();});
+    extractKeywords(state.task).then(list=>{state.keywords=list; computeAndRender();});
+    enrichScoresWithSentiment(state.rankedTasks).then(newList=>{
+      state.rankedTasks = newList; els.taskQueue.innerHTML = state.rankedTasks.map(r=>`<div class="item"><div class="kv"><div>${r.text}</div><div class="sub">分数 ${r.score}</div></div></div>`).join('');
+    });
+  }
 })();
 </script>
 </body>
